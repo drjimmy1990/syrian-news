@@ -1,0 +1,507 @@
+{
+  "wordpress": {
+    "wpUrl": "https://mysyriannews.com",
+    "username": "aggregator_user",
+    "appPassword": "",
+    "statusMode": "draft",
+    "isDryRun": true
+  },
+  "aiRewriter": {
+    "enabled": false,
+    "isDryRun": true,
+    "apiKey": "",
+    "model": "gpt-4o-mini",
+    "userPromptTemplate": "أعد صياغة الخبر التالي باللغة العربية الفصحى بأسلوب احترافي وجذاب مع الحفاظ على الدقة والمصداقية وتجنب التكرار. احتفظ بهيكل الـ HTML كما هو دون تغيير الوسوم:\n\n{content}"
+  },
+  "general": {
+    "dbPath": "news_aggregator.db",
+    "rateLimitDelay": 1500,
+    "maxArticlesPerSource": 3
+  },
+  "sources": [
+    {
+      "name": "عنب بلدي",
+      "url": "https://www.enabbaladi.net",
+      "rssUrl": "https://www.enabbaladi.net/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "h2.entry-title a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": ".post-date time"
+        }
+      }
+    },
+    {
+      "name": "جريدة الوطن السورية",
+      "url": "https://www.alwatanonline.com",
+      "rssUrl": "https://www.alwatanonline.com/feed",
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".post-item",
+          "title": "h3.post-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.single-post-title",
+          "content": ".post-content",
+          "date": ".post-date"
+        }
+      }
+    },
+    {
+      "name": "الدفاع المدني السوري",
+      "url": "https://whitehelmets.org/index.php/ar/alalam/akhbar-wtqaryr-alamyt",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".views-row",
+          "title": "h3.card-title",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.page-title",
+          "content": ".content-body",
+          "date": "span.created"
+        }
+      }
+    },
+    {
+      "name": "الوكالة العربية السورية للأنباء (سانا)",
+      "url": "https://sana.sy",
+      "rssUrl": "https://sana.sy/?feed=rss2",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "h2 a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time.entry-date"
+        }
+      }
+    },
+    {
+      "name": "الإخبارية السورية",
+      "url": "https://alikhbariah.com",
+      "rssUrl": "https://alikhbariah.com/feed",
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".post",
+          "title": "h2 a",
+          "link": "h2 a"
+        },
+        "article": {
+          "title": "h1.post-title",
+          "content": ".post-content",
+          "date": ".post-date"
+        }
+      }
+    },
+    {
+      "name": "تلفزيون سوريا",
+      "url": "https://www.syria.tv",
+      "rssUrl": "https://www.syria.tv/feed",
+      "strategy": "rss",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h3 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.title",
+          "content": ".post-content",
+          "date": ".date"
+        }
+      }
+    },
+    {
+      "name": "زمان الوصل",
+      "url": "https://www.zamanalwsl.net",
+      "rssUrl": "https://www.zamanalwsl.net/rss.html",
+      "strategy": "rss",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".news-item",
+          "title": "h2 a",
+          "link": "h2 a"
+        },
+        "article": {
+          "title": "h1.title",
+          "content": ".news-content",
+          "date": ".news-date"
+        }
+      }
+    },
+    {
+      "name": "شبكة شام الإخبارية",
+      "url": "https://shaam.org",
+      "rssUrl": "https://shaam.org/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "h2 a"
+        },
+        "article": {
+          "title": "h1.post-title",
+          "content": ".post-content",
+          "date": ".post-date"
+        }
+      }
+    },
+    {
+      "name": "أثر برس",
+      "url": "https://www.athrpress.com",
+      "rssUrl": "https://www.athrpress.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "سناك سوري",
+      "url": "https://snacksyrian.com/",
+      "rssUrl": "https://snacksyrian.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "حلب اليوم",
+      "url": "https://halabtodaytv.net/",
+      "rssUrl": "https://halabtodaytv.net/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "نداء بوست",
+      "url": "https://nedaa-post.com/",
+      "rssUrl": "https://nedaa-post.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "صوت العاصمة",
+      "url": "https://damascusv.com/",
+      "rssUrl": "https://damascusv.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "شبكة نداء الفرات",
+      "url": "https://furat-sy.com/",
+      "rssUrl": "https://furat-sy.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "فرات بوست",
+      "url": "https://euphratespost.net/ar/",
+      "rssUrl": "https://euphratespost.net/ar/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "الخابور",
+      "url": "https://alkhabour.com/public/ar",
+      "rssUrl": "https://alkhabour.com/public/ar/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "صحيفة الفرات",
+      "url": "https://furat.alwehda.gov.sy/?cat=17",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "صحيفة الثورة",
+      "url": "http://Thawra.sy",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".views-row",
+          "title": "a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".content-body",
+          "date": ".created"
+        }
+      }
+    },
+    {
+      "name": "صحيفة الوحدة",
+      "url": "https://alwehda-news.sy/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "صحيفة العروبة",
+      "url": "http://ouruba.alwehda.gov.sy/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "وكالة سوريا الجديدة",
+      "url": "https://nsasyr.net/",
+      "rssUrl": "https://nsasyr.net/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "سيريا لايف",
+      "url": "https://www.syria-life.com/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "سوكة نيوز",
+      "url": "https://www.sookeh.com/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "اخبار سوريا - الجزيرة",
+      "url": "https://www.aljazeera.net/where/mideast/arab/syria/",
+      "rssUrl": "https://www.aljazeera.net/feed/rss/where/mideast/arab/syria/",
+      "strategy": "rss",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "أخبار سوريا - العربية",
+      "url": "https://www.alarabiya.net/arab-and-world/syria",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".latest-news-list li",
+          "title": "a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".article-body",
+          "date": ".date-format"
+        }
+      }
+    },
+    {
+      "name": "عربي 21- سوريا",
+      "url": "https://arabi21.com/stories/t/50055/0/%D8%B3%D9%88%D8%B1%D9%8A%D8%A9",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".story-item",
+          "title": "h3 a",
+          "link": "h3 a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".story-body",
+          "date": ".story-date"
+        }
+      }
+    },
+    {
+      "name": "العربي الجديد - سوريا",
+      "url": "https://www.alaraby.co.uk/news/syria",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".story-card",
+          "title": "h3 a",
+          "link": "h3 a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".story-content",
+          "date": ".pub-date"
+        }
+      }
+    },
+    {
+      "name": "الحدث - سوريا",
+      "url": "https://www.alhadath.net/syria",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".news-feed li",
+          "title": "a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".article-body",
+          "date": ".date-info"
+        }
+      }
+    },
+    {
+      "name": "سيرياديز",
+      "url": "https://syriandays.com/?",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "tr",
+          "title": "a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".news_text",
+          "date": ".news_date"
+        }
+      }
+    },
+    {
+      "name": "الشرق - سوريا",
+      "url": "https://asharq.com/locations/%D8%B3%D9%88%D8%B1%D9%8A%D8%A7/",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".card-container",
+          "title": "h4 a",
+          "link": "h4 a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".article-body",
+          "date": ".article-date"
+        }
+      }
+    },
+    {
+      "name": "سوريا اونلاين",
+      "url": "https://syria-online.net/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "السوري",
+      "url": "https://alsori.net/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "صحيفة الحرية",
+      "url": "https://alhurriyah.sy/",
+      "rssUrl": null,
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8"
+    },
+    {
+      "name": "الترا سوريا",
+      "url": "https://ultrasyria.ultrasawt.com/",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".views-row",
+          "title": "a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".content-body",
+          "date": ".created-date"
+        }
+      }
+    },
+    {
+      "name": "العربي - سوريا",
+      "url": "https://www.alaraby.com/news/arab-world/%D8%A3%D8%AE%D8%A8%D8%A7%D8%B1-%D8%B3%D9%88%D8%B1%D9%8A%D8%A7",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": ".story-item",
+          "title": "a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".story-text",
+          "date": ".story-date"
+        }
+      }
+    }
+  ]
+}

@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     inpSelArtContent: document.getElementById('inp-sel-art-content'),
     inpSelArtDate: document.getElementById('inp-sel-art-date'),
     inpSrcEnabled: document.getElementById('inp-src-enabled'),
+    btnAutoDetect: document.getElementById('btn-auto-detect'),
 
     toastContainer: document.getElementById('toast-container')
   };
@@ -608,6 +609,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   // 6. NEWS SOURCES TAB CONTROLLER
   // =========================================================================
+  function formatRelativeTime(isoString) {
+    if (!isoString) return 'غير مفحوص';
+    try {
+      const diff = Date.now() - new Date(isoString).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'الآن';
+      if (mins < 60) return `منذ ${mins} دقيقة`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `منذ ${hours} ساعة`;
+      const days = Math.floor(hours / 24);
+      return `منذ ${days} يوم`;
+    } catch (e) {
+      return 'غير معروف';
+    }
+  }
+
   function loadSourcesTable() {
     if (!state.config || !state.config.sources) return;
     
@@ -628,12 +645,25 @@ document.addEventListener('DOMContentLoaded', () => {
         html: '<span class="badge badge-warning"><i class="fa-solid fa-spider"></i> HTML Crawl</span>'
       };
 
+      let lastTestedHtml = '';
+      if (src.lastTestedAt) {
+        const timeStr = formatRelativeTime(src.lastTestedAt);
+        if (src.lastTestStatus === 'success') {
+          lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px;"><span class="status-dot online" title="فحص ناجح"></span> <span class="font-tajawal text-xs text-white">${timeStr}</span></div>`;
+        } else {
+          lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px;"><span class="status-dot offline" title="فشل الفحص: ${escapeHtml(src.lastTestError || '')}"></span> <span class="font-tajawal text-xs text-danger" title="فشل الفحص: ${escapeHtml(src.lastTestError || '')}">${timeStr} (فشل)</span></div>`;
+        }
+      } else {
+        lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px;"><span class="status-dot warning" title="غير مفحوص"></span> <span class="text-muted text-xs">غير مفحوص</span></div>`;
+      }
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>${escapeHtml(src.name)}</strong></td>
         <td><a href="${src.url}" target="_blank" class="table-link">${escapeHtml(src.url)} <i class="fa-solid fa-up-right-from-square"></i></a></td>
         <td>${src.rssUrl ? `<a href="${src.rssUrl}" target="_blank" class="table-link">${escapeHtml(src.rssUrl)}</a>` : '<span class="text-muted">غير متوفر</span>'}</td>
         <td>${strategyMap[src.strategy] || src.strategy}</td>
+        <td>${lastTestedHtml}</td>
         <td>
           <label class="switch-container">
             <input type="checkbox" class="toggle-source-status" data-index="${idx}" ${src.enabled ? 'checked' : ''}>
@@ -654,7 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (matchingSources === 0) {
       DOM.tblSourcesBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-center py-4 text-muted">لا توجد مصادر إخبارية مطابقة للبحث الحالي.</td>
+          <td colspan="7" class="text-center py-4 text-muted">لا توجد مصادر إخبارية مطابقة للبحث الحالي.</td>
         </tr>
       `;
     }
@@ -763,6 +793,12 @@ document.addEventListener('DOMContentLoaded', () => {
       DOM.testScrapeLoading.classList.add('d-none');
       
       if (result.success) {
+        // Update client-side status state
+        state.config.sources[index].lastTestedAt = result.lastTestedAt || new Date().toISOString();
+        state.config.sources[index].lastTestStatus = 'success';
+        delete state.config.sources[index].lastTestError;
+        loadSourcesTable();
+
         DOM.testResultsCount.textContent = result.articlesCount.toLocaleString('ar-EG');
         DOM.testArticlesContainer.innerHTML = '';
         
@@ -801,6 +837,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         DOM.testScrapeResults.classList.remove('d-none');
       } else {
+        state.config.sources[index].lastTestedAt = result.lastTestedAt || new Date().toISOString();
+        state.config.sources[index].lastTestStatus = 'failed';
+        state.config.sources[index].lastTestError = result.lastTestError || result.error;
+        loadSourcesTable();
+
         DOM.testErrorMessage.textContent = result.error || 'حدث خطأ غير متوقع أثناء الجلب.';
         DOM.testScrapeError.classList.remove('d-none');
       }
@@ -808,6 +849,11 @@ document.addEventListener('DOMContentLoaded', () => {
       DOM.testScrapeLoading.classList.add('d-none');
       DOM.testErrorMessage.textContent = `عطل في الاتصال بالخادم: ${error.message}`;
       DOM.testScrapeError.classList.remove('d-none');
+
+      state.config.sources[index].lastTestedAt = new Date().toISOString();
+      state.config.sources[index].lastTestStatus = 'failed';
+      state.config.sources[index].lastTestError = error.message;
+      loadSourcesTable();
     }
   }
 
@@ -1212,6 +1258,59 @@ document.addEventListener('DOMContentLoaded', () => {
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);
     };
+  }
+
+  // Handle Auto-Detect button click
+  if (DOM.btnAutoDetect) {
+    DOM.btnAutoDetect.addEventListener('click', async () => {
+      const url = DOM.inpSrcUrl.value.trim();
+      if (!url) {
+        showToast('يرجى إدخال رابط الموقع أولاً للتمكن من فحسه وكشف الإعدادات تلقائياً.', 'warning');
+        return;
+      }
+
+      // Show spinner state on the button
+      const originalHtml = DOM.btnAutoDetect.innerHTML;
+      DOM.btnAutoDetect.disabled = true;
+      DOM.btnAutoDetect.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الكشف...';
+
+      try {
+        const res = await fetch('/api/sources/auto-detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          showToast(`تم التعرف على إعدادات الموقع تلقائياً بنجاح!`, 'success');
+          
+          // Populate fields
+          if (result.name) DOM.inpSrcName.value = result.name;
+          if (result.rssUrl) DOM.inpSrcRss.value = result.rssUrl;
+          else DOM.inpSrcRss.value = '';
+          
+          if (result.strategy) DOM.inpSrcStrategy.value = result.strategy;
+          if (result.encoding) DOM.inpSrcEncoding.value = result.encoding;
+          
+          if (result.selectors) {
+            const list = result.selectors.list || {};
+            const art = result.selectors.article || {};
+            DOM.inpSelListContainer.value = list.container || '';
+            DOM.inpSelListTitle.value = list.title || '';
+            DOM.inpSelArtContent.value = art.content || '';
+            DOM.inpSelArtDate.value = art.date || '';
+          }
+        } else {
+          showToast(`فشل الكشف التلقائي: ${result.error || 'عطل مجهول'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`عطل في الاتصال بخادم الكشف: ${err.message}`, 'error');
+      } finally {
+        DOM.btnAutoDetect.disabled = false;
+        DOM.btnAutoDetect.innerHTML = originalHtml;
+      }
+    });
   }
 
   // =========================================================================

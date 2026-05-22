@@ -342,30 +342,57 @@ app.post('/api/test-ai', async (req, res) => {
 });
 
 /**
+ * POST /api/sources/auto-detect - Auto-probe website scraping options
+ */
+app.post('/api/sources/auto-detect', async (req, res) => {
+  const { url } = req.body;
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'Target URL is required.' });
+  }
+
+  try {
+    const { autoDetectStrategy } = require('./scraper');
+    const result = await autoDetectStrategy(url);
+    res.json(result);
+  } catch (error) {
+    console.error(`[Server Error] Auto-detect failed:`, error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/sources/:index/test - Test scrape a single source configuration in isolation
  */
 app.post('/api/sources/:index/test', async (req, res) => {
+  const config = readConfig();
+  const index = parseInt(req.params.index);
+
+  if (isNaN(index) || index < 0 || index >= config.sources.length) {
+    return res.status(404).json({ success: false, error: 'News source index out of bounds.' });
+  }
+
+  const source = config.sources[index];
+  const { fetchArticles } = require('./scraper');
+
+  console.log(`[Server] Isolated scrape test initiated for: ${source.name} [Index ${index}]`);
+
   try {
-    const config = readConfig();
-    const index = parseInt(req.params.index);
-
-    if (isNaN(index) || index < 0 || index >= config.sources.length) {
-      return res.status(404).json({ success: false, error: 'News source index out of bounds.' });
-    }
-
-    const source = config.sources[index];
-    const { fetchArticles } = require('./scraper');
-
-    console.log(`[Server] Isolated scrape test initiated for: ${source.name} [Index ${index}]`);
-
-    // Force limit of 2 for testing, but let's use the source config itself if available
+    // Force limit of 2 for testing
     const articles = await fetchArticles([source], 2);
+
+    // Save test diagnostics metadata
+    source.lastTestedAt = new Date().toISOString();
+    source.lastTestStatus = 'success';
+    delete source.lastTestError;
+    saveConfig(config);
 
     res.json({
       success: true,
       sourceName: source.name,
       strategy: source.strategy,
       articlesCount: articles.length,
+      lastTestedAt: source.lastTestedAt,
+      lastTestStatus: source.lastTestStatus,
       articles: articles.map(art => ({
         title: art.title,
         url: art.url,
@@ -376,7 +403,20 @@ app.post('/api/sources/:index/test', async (req, res) => {
     });
   } catch (error) {
     console.error(`[Server Error] Isolated test scraping failed:`, error);
-    res.json({ success: false, error: `Scraping failed: ${error.message}` });
+    
+    // Save failed test diagnostics metadata
+    source.lastTestedAt = new Date().toISOString();
+    source.lastTestStatus = 'failed';
+    source.lastTestError = error.message;
+    saveConfig(config);
+
+    res.json({ 
+      success: false, 
+      error: `Scraping failed: ${error.message}`,
+      lastTestedAt: source.lastTestedAt,
+      lastTestStatus: source.lastTestStatus,
+      lastTestError: source.lastTestError
+    });
   }
 });
 

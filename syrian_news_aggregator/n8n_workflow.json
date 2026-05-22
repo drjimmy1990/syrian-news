@@ -1,89 +1,118 @@
 {
-  "name": "Syrian News Aggregator AI Pipeline",
+  "name": "Syrian News Aggregator & AI Rewriter Pipeline",
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "hours"
-            }
-          ]
-        }
+        "rule": "interval",
+        "value": 15,
+        "unit": "minutes"
       },
-      "id": "1d8a176e-5735-430c-ab23-f36de4cf75cc",
+      "id": "4a7b5d19-4f7f-4424-9b2f-309191e4a6a5",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
       "position": [
-        100,
+        250,
         300
-      ]
+      ],
+      "notesInFlow": true,
+      "notes": "Triggers every 15 minutes to aggregate Syrian news articles."
     },
     {
       "parameters": {
-        "url": "https://www.enabbaladi.net/feed"
+        "url": "https://www.enabbaladi.net/wp-json/wp/v2/posts?per_page=10&_embed=1"
       },
-      "id": "2e9a2b5a-4712-421b-801b-c12da9f935da",
-      "name": "Read RSS Feed",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1,
+      "id": "db00de23-0ad2-430b-9dfd-b06bb0769cf3",
+      "name": "Fetch Latest News (HTTP Request)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
       "position": [
-        280,
+        450,
         300
-      ]
+      ],
+      "notesInFlow": true,
+      "notes": "Fetches high-resiliency WP REST API feed for Syrian news."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "",
+        "options": {}
+      },
+      "id": "d0bead57-9dbd-4f11-be71-cf2c12ea880a",
+      "name": "Item Lists (Loop Over Articles)",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Processes each scraped article individually."
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT id FROM processed_articles WHERE url_hash = '{{ $json.link }}' OR title_hash = '{{ $json.title }}';"
+        "query": "SELECT id, title_hash, url_hash FROM articles WHERE url_hash = :urlHash OR title_hash = :titleHash LIMIT 1",
+        "additionalFields": {
+          "parameterNumbers": {
+            "parameter": [
+              {
+                "name": "urlHash",
+                "value": "={{$json.link}}"
+              },
+              {
+                "name": "titleHash",
+                "value": "={{$json.title.rendered}}"
+              }
+            ]
+          }
+        }
       },
-      "id": "3d9a3c6b-5813-432c-912c-d23da0f046eb",
+      "id": "b34e568d-8fd2-4bbf-bb78-4db81d6d87cd",
       "name": "SQLite Deduplication Check",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
       "position": [
-        460,
+        850,
         300
       ],
-      "credentials": {
-        "sqlite": {
-          "id": "sqlite-local-db"
-        }
-      }
+      "notesInFlow": true,
+      "notes": "Performs exact hash deduplication gate check."
     },
     {
       "parameters": {
         "conditions": {
-          "number": [
+          "boolean": [
             {
-              "value1": "={{ $json.id }}",
-              "operation": "isEmpty"
+              "value1": "={{$json.length}}",
+              "value2": 0
             }
           ]
         }
       },
-      "id": "4e0a4d7c-6924-443d-a23d-e34da1f157fc",
-      "name": "If New Article?",
+      "id": "cb1c34a2-bd32-411a-85eb-e362c1cfcfbe",
+      "name": "Is Unique?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        640,
+        1050,
         300
-      ]
+      ],
+      "notesInFlow": true,
+      "notes": "If no existing record was found, proceed to AI rewrite stage."
     },
     {
       "parameters": {
         "model": "gpt-4o-mini",
-        "messages": {
-          "messageValues": [
+        "prompt": {
+          "messages": [
             {
               "role": "system",
               "content": "أنت صحفي محترف. أعد صياغة الخبر التالي باللغة العربية الفصحى بأسلوب احترافي وجذاب مع الحفاظ على الدقة والمصداقية وتجنب التكرار. احتفظ بهيكل الـ HTML كما هو دون تغيير الوسوم."
             },
             {
               "role": "user",
-              "content": "=Title: {{ $node[\"Read RSS Feed\"].json[\"title\"] }}\n\nContent:\n{{ $node[\"Read RSS Feed\"].json[\"content\"] }}"
+              "content": "={{$node[\"Item Lists (Loop Over Articles)\"].json.content.rendered}}"
             }
           ]
         },
@@ -91,58 +120,89 @@
           "temperature": 0.3
         }
       },
-      "id": "5f1a5e8d-7035-454d-b34d-f45da2f268fd",
-      "name": "AI Rewrite (OpenAI LLM)",
+      "id": "99f8d6fb-cf55-4ff8-9de2-98319f6a73c1",
+      "name": "AI Paraphraser (OpenAI)",
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
       "position": [
-        820,
+        1250,
         200
       ],
-      "credentials": {
-        "openAiApi": {
-          "id": "openai-token-creds"
-        }
-      }
+      "notesInFlow": true,
+      "notes": "Executes professional Arabic rewriting of article content."
     },
     {
       "parameters": {
-        "title": "= {{ $node[\"Read RSS Feed\"].json[\"title\"] }}",
-        "content": "= <div class=\"syrian-news-article\" style=\"direction: rtl; text-align: right; font-family: tahoma, sans-serif; line-height: 1.8;\">\n  <div class=\"article-body-content\">\n    {{ $json[\"choices\"][0][\"message\"][\"content\"] }}\n  </div>\n  <hr class=\"wp-block-separator\" style=\"margin: 30px 0; border: none; border-top: 1px solid #ddd;\" />\n  <blockquote class=\"wp-block-quote source-attribution\" style=\"border-right: 4px solid #0056b3; border-left: none; padding-right: 15px; margin: 20px 0; background-color: #f9f9f9; padding: 15px 20px; border-radius: 4px;\">\n    <p style=\"margin: 0 0 10px 0; font-size: 14px; color: #555;\">\n      هذا الخبر مستورد تلقائياً عبر نظام التجميع والنشـر التلقائي من موقع:\n      <strong style=\"color: #0056b3;\">{{ $node[\"Read RSS Feed\"].json[\"source_name\"] || \"عنب بلدي\" }}</strong>\n    </p>\n    <p style=\"margin: 0 0 10px 0; font-size: 13px; color: #777;\">\n      تاريخ النشـر الأصلي: <span>{{ $node[\"Read RSS Feed\"].json[\"isoDate\"] }}</span>\n    </p>\n    <p style=\"margin: 0; font-size: 14px;\">\n      المصدر الأصلي للخبر:\n      <a href=\"{{ $node[\"Read RSS Feed\"].json[\"link\"] }}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #0056b3; text-decoration: underline; font-weight: bold;\">\n        اضغط هنا لزيارة الرابط الأصلي\n      </a>\n    </p>\n  </blockquote>\n</div>",
-        "status": "draft"
+        "title": "={{$node[\"Item Lists (Loop Over Articles)\"].json.title.rendered}}",
+        "content": "={{$json.choices[0].message.content}}",
+        "status": "draft",
+        "additionalFields": {
+          "excerpt": "={{$node[\"Item Lists (Loop Over Articles)\"].json.excerpt.rendered}}"
+        }
       },
-      "id": "6a2b6f9e-8146-465e-c45e-056da3f379fe",
-      "name": "WordPress Create Post",
+      "id": "e30cb78f-ef1a-471a-9f5b-fb67362a7fb4",
+      "name": "WordPress (Create Draft)",
       "type": "n8n-nodes-base.wordpress",
       "typeVersion": 1,
       "position": [
-        1000,
+        1450,
         200
       ],
-      "credentials": {
-        "wordpressApi": {
-          "id": "wordpress-app-pass"
-        }
-      }
+      "notesInFlow": true,
+      "notes": "Publishes newly paraphrased article content directly as WP draft."
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "=INSERT INTO processed_articles (title, url, normalized_url, url_hash, title_hash, content_hash, source_name, published_at, wordpress_post_id, status)\nVALUES ('{{ $node[\"Read RSS Feed\"].json[\"title\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"link\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"link\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"link\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"title\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"title\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"source_name\"] || \"عنب بلدي\" }}', '{{ $node[\"Read RSS Feed\"].json[\"isoDate\"] }}', {{ $json.id }}, 'published');"
+        "operation": "insert",
+        "table": "articles",
+        "columns": {
+          "column": [
+            {
+              "name": "title",
+              "value": "={{$node[\"Item Lists (Loop Over Articles)\"].json.title.rendered}}"
+            },
+            {
+              "name": "url",
+              "value": "={{$node[\"Item Lists (Loop Over Articles)\"].json.link}}"
+            },
+            {
+              "name": "content",
+              "value": "={{$node[\"AI Paraphraser (OpenAI)\"].json.choices[0].message.content}}"
+            },
+            {
+              "name": "wp_post_id",
+              "value": "={{$node[\"WordPress (Create Draft)\"].json.id}}"
+            },
+            {
+              "name": "scraped_at",
+              "value": "={{$now}}"
+            }
+          ]
+        }
       },
-      "id": "7b3c7a0f-9257-476f-d56f-167da4f48a0f",
-      "name": "Log to SQLite Database",
+      "id": "31bfa82e-9dfb-46bf-8dfc-3abfbe3e6e11",
+      "name": "Save to Local DB",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
       "position": [
-        1180,
+        1650,
         200
       ],
-      "credentials": {
-        "sqlite": {
-          "id": "sqlite-local-db"
-        }
-      }
+      "notesInFlow": true,
+      "notes": "Saves article metadata & WP post ID to local SQLite DB to prevent duplicate aggregates."
+    },
+    {
+      "parameters": {},
+      "id": "5cb8ee24-9b2f-48d9-a78b-d7d812ebdfc8",
+      "name": "Duplicate Bypassed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        400
+      ],
+      "notesInFlow": true,
+      "notes": "Graceful exit when near-duplicate or exact URL matches exist."
     }
   ],
   "connections": {
@@ -150,14 +210,25 @@
       "main": [
         [
           {
-            "node": "Read RSS Feed",
+            "node": "Fetch Latest News (HTTP Request)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read RSS Feed": {
+    "Fetch Latest News (HTTP Request)": {
+      "main": [
+        [
+          {
+            "node": "Item Lists (Loop Over Articles)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Item Lists (Loop Over Articles)": {
       "main": [
         [
           {
@@ -172,41 +243,47 @@
       "main": [
         [
           {
-            "node": "If New Article?",
+            "node": "Is Unique?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If New Article?": {
+    "Is Unique?": {
       "main": [
         [
           {
-            "node": "AI Rewrite (OpenAI LLM)",
+            "node": "AI Paraphraser (OpenAI)",
             "type": "main",
             "index": 0
           }
         ],
-        []
-      ]
-    },
-    "AI Rewrite (OpenAI LLM)": {
-      "main": [
         [
           {
-            "node": "WordPress Create Post",
+            "node": "Duplicate Bypassed",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "WordPress Create Post": {
+    "AI Paraphraser (OpenAI)": {
       "main": [
         [
           {
-            "node": "Log to SQLite Database",
+            "node": "WordPress (Create Draft)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress (Create Draft)": {
+      "main": [
+        [
+          {
+            "node": "Save to Local DB",
             "type": "main",
             "index": 0
           }
@@ -214,6 +291,10 @@
       ]
     }
   },
-  "active": false,
-  "settings": {}
+  "settings": {
+    "executionTimeout": 3600
+  },
+  "meta": {
+    "templateId": "syrian-news-aggregator-ai-paraphraser"
+  }
 }

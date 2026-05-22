@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Ultimate GitNexus Playbook Hub</title>
+  <meta name="description" content="An ultra-premium, interactive single-page app and engineering playbook for GitNexus - the next-generation graph-based code intelligence engine.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient Mesh Gradients Background -->
+  <div class="ambient-bg">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+  </div>
+
+  <!-- Main Application Layout -->
+  <div class="app-container">
+
+    <!-- Glassmorphic Sidebar Navigation -->
+    <aside class="app-sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+          </svg>
+        </div>
+        <span class="logo-text">GitNexus</span>
+      </div>
+
+      <nav style="flex-grow: 1;">
+        <ul class="sidebar-nav">
+          <li class="nav-item active" data-section="overview">
+            <a href="#overview">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M12 2L2 22h20L12 2zm0 3.99L19.53 19H4.47L12 5.99zM13 16h-2v2h2v-2zm0-6h-2v4h2v-4z"/>
+              </svg>
+              <span>Overview & Schema</span>
+            </a>
+          </li>
+          <li class="nav-item" data-section="lifecycle">
+            <a href="#lifecycle">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm3.3 14.79L11 12.5V7h1.5v4.78l3.62 2.16-.83 1.35z"/>
+              </svg>
+              <span>Lifecycle Sequence</span>
+            </a>
+          </li>
+          <li class="nav-item" data-section="cli">
+            <a href="#cli">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 12H4v-2h8v2zm8-4H4V8h16v4z"/>
+              </svg>
+              <span>CLI Command Builder</span>
+            </a>
+          </li>
+          <li class="nav-item" data-section="ide-setup">
+            <a href="#ide-setup">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H9v-2h6v2zm3-4H6V8h12v6z"/>
+              </svg>
+              <span>IDE Setup & Guides</span>
+            </a>
+          </li>
+          <li class="nav-item" data-section="skills">
+            <a href="#skills">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.58 10.47 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+              </svg>
+              <span>Agent Skills Hub</span>
+            </a>
+          </li>
+          <li class="nav-item" data-section="cheatsheet">
+            <a href="#cheatsheet">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/>
+              </svg>
+              <span>Cheat Sheet Hub</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="footer-profile">
+          <div class="profile-avatar">AG</div>
+          <div class="profile-info">
+            <span class="profile-name">Antigravity</span>
+            <span class="profile-role">Senior AI Architect</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <main class="app-content">
+
+      <!-- Top Navigation Bar -->
+      <header class="top-header">
+        <div class="header-title-section">
+          <h1 id="main-title">GitNexus Playbook</h1>
+          <p id="main-subtitle">High-Performance Graph-Based Code Intelligence Hub</p>
+        </div>
+        <div class="theme-controls">
+          <div class="header-search">
+            <input type="text" id="global-search" placeholder="Search playbook concepts...">
+            <svg viewBox="0 0 24 24">
+              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </div>
+        </div>
+      </header>
+
+      <!-- ================= SECTION: OVERVIEW & SCHEMA ================= -->
+      <section id="overview-section" class="playbook-section active">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--primary)">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+                Graph-Based Code Intelligence Philosophy
+              </h2>
+              <p class="card-subtitle">How GitNexus structures codebase logic into KuzuDB</p>
+            </div>
+          </div>
+          
+          <div class="alert-box important">
+            <div class="alert-title">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              </svg>
+              The Shift: Static Grep vs Graph Intelligence
+            </div>
+            <div class="alert-content">
+              Static text searches (like ripgrep) lack syntactical boundaries, scope analysis, and call hierarchy awareness. GitNexus structures repository elements as nodes and semantic relationships as edges inside an ultra-fast, local graph database. This lets you traverse dependencies and trace user execution paths programmatically.
+            </div>
+          </div>
+
+          <div style="margin-top: 24px;">
+            <h3 style="font-size: 16px; margin-bottom: 12px;">Interactive KuzuDB Schema Explorer</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+              Select any graph node or edge relation below to view its specific AST attributes, properties list, and concrete system behavior.
+            </p>
+            
+            <div class="schema-explorer-layout">
+              <div class="schema-sidebar">
+                <div>
+                  <div class="schema-group-title">Graph Nodes</div>
+                  <div class="schema-buttons">
+                    <button class="schema-btn active" data-type="node" data-name="File">File</button>
+                    <button class="schema-btn" data-type="node" data-name="Function">Function</button>
+                    <button class="schema-btn" data-type="node" data-name="Class">Class</button>
+                    <button class="schema-btn" data-type="node" data-name="Interface">Interface</button>
+                    <button class="schema-btn" data-type="node" data-name="Method">Method</button>
+                    <button class="schema-btn" data-type="node" data-name="Community">Community</button>
+                    <button class="schema-btn" data-type="node" data-name="Process">Process</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="schema-group-title">Graph Edges (Relations)</div>
+                  <div class="schema-buttons">
+                    <button class="schema-btn edge" data-type="edge" data-name="CALLS">CALLS</button>
+                    <button class="schema-btn edge" data-type="edge" data-name="IMPORTS">IMPORTS</button>
+                    <button class="schema-btn edge" data-type="edge" data-name="EXTENDS">EXTENDS</button>
+                    <button class="schema-btn edge" data-type="edge" data-name="IMPLEMENTS">IMPLEMENTS</button>
+                    <button class="schema-btn edge" data-type="edge" data-name="DEFINES">DEFINES</button>
+                    <button class="schema-btn edge" data-type="edge" data-name="MEMBER_OF">MEMBER_OF</button>
+                    <button class="schema-btn edge" data-type="edge" data-name="STEP_IN_PROCESS">STEP_IN_PROCESS</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Info Card Panel -->
+              <div class="schema-details-panel" id="schema-details">
+                <div class="schema-panel-header">
+                  <span class="schema-element-name" id="schema-name">File</span>
+                  <span class="schema-element-badge node" id="schema-badge">Node</span>
+                </div>
+                
+                <div class="schema-panel-section">
+                  <div class="schema-section-title">Functional Description</div>
+                  <p class="cypher-diag-text" id="schema-description">
+                    Represents a physical source code file in the local workspace registry (e.g. <code>src/auth/session.ts</code>). It forms the base boundary container for scoped declarations, compilation exports, and imports mappings.
+                  </p>
+                </div>
+
+                <div class="schema-panel-section">
+                  <div class="schema-section-title">KuzuDB Properties</div>
+                  <div class="properties-list" id="schema-properties">
+                    <div class="property-row">
+                      <span class="property-name">path</span>
+                      <span class="property-type">STRING</span>
+                    </div>
+                    <div class="property-row">
+                      <span class="property-name">size</span>
+                      <span class="property-type">INT64</span>
+                    </div>
+                    <div class="property-row">
+                      <span class="property-name">language</span>
+                      <span class="property-type">STRING</span>
+                    </div>
+                    <div class="property-row">
+                      <span class="property-name">lastModified</span>
+                      <span class="property-type">TIMESTAMP</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: LIFECYCLE SEQUENCE ================= -->
+      <section id="lifecycle-section" class="playbook-section">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--primary)">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                </svg>
+                Developer Lifecycle Sequence
+              </h2>
+              <p class="card-subtitle">Chronological, tool-assisted engineering steps for daily tasks</p>
+            </div>
+          </div>
+
+          <div class="timeline-tabs">
+            <button class="timeline-tab active" data-phase="1">
+              <span>Phase 1: Initialization</span>
+            </button>
+            <button class="timeline-tab" data-phase="2">
+              <span>Phase 2: Concept Search</span>
+            </button>
+            <button class="timeline-tab" data-phase="3">
+              <span>Phase 3: Blast Radius Pre-Check</span>
+            </button>
+            <button class="timeline-tab" data-phase="4">
+              <span>Phase 4: Active Implementation</span>
+            </button>
+            <button class="timeline-tab" data-phase="5">
+              <span>Phase 5: Pre-Commit Validation</span>
+            </button>
+          </div>
+
+          <!-- Timeline Phase Cards -->
+          <div class="timeline-card active" data-phase="1">
+            <div class="timeline-steps-grid">
+              <div>
+                <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--primary);">Context Initialization & Index Alignment</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+                  Before writing any code or reading source files, align your context window with the current state of the knowledge graph index.
+                </p>
+                <div class="code-container">
+                  <div class="code-header">
+                    <span class="code-lang-tag">powershell</span>
+                    <button class="code-copy-btn" onclick="copyToClipboard('npx gitnexus status')">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                  <div class="code-content">
+                    <pre><code>npx gitnexus status
+npx gitnexus analyze --embeddings</code></pre>
+                  </div>
+                </div>
+              </div>
+              <div class="timeline-checkpoints">
+                <div class="schema-group-title" style="margin-bottom: 14px;">Action Checklist</div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">1</div>
+                  <div class="checkpoint-content">
+                    <h4>Discover Registered Repositories</h4>
+                    <p>Query <code>gitnexus://repos</code> resource to locate the workspace.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">2</div>
+                  <div class="checkpoint-content">
+                    <h4>Diagnose Index Freshness</h4>
+                    <p>Read <code>gitnexus://repo/{repoName}/context</code>, check staleness.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">3</div>
+                  <div class="checkpoint-content">
+                    <h4>Trigger Re-Analysis</h4>
+                    <p>If commitsBehind > 0, run analysis with vector embeddings.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-card" data-phase="2">
+            <div class="timeline-steps-grid">
+              <div>
+                <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--primary);">Structural Discovery & Concept Hunting</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+                  Instead of running static keyword greps, query the graph semantically to find process clusters representing execution flows.
+                </p>
+                <div class="code-container">
+                  <div class="code-header">
+                    <span class="code-lang-tag">json</span>
+                    <button class="code-copy-btn" onclick="copyToClipboard(JSON.stringify({query: 'session cache lookup', repo: 'auth-service'}, null, 2))">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy Query</span>
+                    </button>
+                  </div>
+                  <div class="code-content">
+                    <pre><code>{
+  "query": "session cache lookup",
+  "repo": "auth-service"
+}</code></pre>
+                  </div>
+                </div>
+              </div>
+              <div class="timeline-checkpoints">
+                <div class="schema-group-title" style="margin-bottom: 14px;">Action Checklist</div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">1</div>
+                  <div class="checkpoint-content">
+                    <h4>Perform Semantic Query</h4>
+                    <p>Locate code symbols related to the business capability.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">2</div>
+                  <div class="checkpoint-content">
+                    <h4>Analyze Process Groupings</h4>
+                    <p>Check returned execution flows instead of disjoint files.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">3</div>
+                  <div class="checkpoint-content">
+                    <h4>Inspect Execution Traces</h4>
+                    <p>Read the chronological process steps from the resources.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-card" data-phase="3">
+            <div class="timeline-steps-grid">
+              <div>
+                <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--primary);">Blast Radius Assessment & Architectural Pre-Check</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+                  MANDATORY step. Always evaluate who will break if you modify a given symbol. Run upstream impact mapping before changing any code.
+                </p>
+                <div class="code-container">
+                  <div class="code-header">
+                    <span class="code-lang-tag">json</span>
+                    <button class="code-copy-btn" onclick="copyToClipboard(JSON.stringify({target: 'validateSession', direction: 'upstream', maxDepth: 3, repo: 'auth-service'}, null, 2))">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy Input</span>
+                    </button>
+                  </div>
+                  <div class="code-content">
+                    <pre><code>{
+  "target": "validateSession",
+  "direction": "upstream",
+  "maxDepth": 3,
+  "repo": "auth-service"
+}</code></pre>
+                  </div>
+                </div>
+              </div>
+              <div class="timeline-checkpoints">
+                <div class="schema-group-title" style="margin-bottom: 14px;">Action Checklist</div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">1</div>
+                  <div class="checkpoint-content">
+                    <h4>Trace incoming callers & parents</h4>
+                    <p>Run <code>gitnexus_context</code> on the target symbol first.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">2</div>
+                  <div class="checkpoint-content">
+                    <h4>Map Blast Radius (d=1, 2, 3)</h4>
+                    <p>Calculate affected symbols and process memberships.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">3</div>
+                  <div class="checkpoint-content">
+                    <h4>Assess Cumulative Risk Level</h4>
+                    <p>Use the Low/Med/High/Crit scale. Warn user if High/Crit.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-card" data-phase="4">
+            <div class="timeline-steps-grid">
+              <div>
+                <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--primary);">Active Code Implementation & Coordinated Refactoring</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+                  Make surgical changes. Avoid raw find-and-replace for structural renames; utilize compiled call-graphs via AST rename tooling.
+                </p>
+                <div class="code-container">
+                  <div class="code-header">
+                    <span class="code-lang-tag">json</span>
+                    <button class="code-copy-btn" onclick="copyToClipboard(JSON.stringify({symbol_name: 'validateSession', new_name: 'authenticateUserSession', dry_run: true, repo: 'auth-service'}, null, 2))">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy Input</span>
+                    </button>
+                  </div>
+                  <div class="code-content">
+                    <pre><code>{
+  "symbol_name": "validateSession",
+  "new_name": "authenticateUserSession",
+  "dry_run": true,
+  "repo": "auth-service"
+}</code></pre>
+                  </div>
+                </div>
+              </div>
+              <div class="timeline-checkpoints">
+                <div class="schema-group-title" style="margin-bottom: 14px;">Action Checklist</div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">1</div>
+                  <div class="checkpoint-content">
+                    <h4>Run Coordinated Rename Dry Run</h4>
+                    <p>Verify graph edits and low-confidence AST search matches.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">2</div>
+                  <div class="checkpoint-content">
+                    <h4>Apply Rename & Resolve Imports</h4>
+                    <p>Apply change dynamically, ensuring compiler alignment.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">3</div>
+                  <div class="checkpoint-content">
+                    <h4>Deploy Backward-Compatibilities</h4>
+                    <p>For high risk, use Expand-Contract (parallel versions).</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-card" data-phase="5">
+            <div class="timeline-steps-grid">
+              <div>
+                <h3 style="font-size: 16px; margin-bottom: 12px; color: var(--primary);">Pre-Commit Validation & Integrity Verification</h3>
+                <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+                  Before staging or committing, audit code updates against the graph index to ensure zero dependency bleeding into unrelated workflows.
+                </p>
+                <div class="code-container">
+                  <div class="code-header">
+                    <span class="code-lang-tag">json</span>
+                    <button class="code-copy-btn" onclick="copyToClipboard(JSON.stringify({repo: 'auth-service', scope: 'staged'}, null, 2))">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy Input</span>
+                    </button>
+                  </div>
+                  <div class="code-content">
+                    <pre><code>{
+  "repo": "auth-service",
+  "scope": "staged"
+}</code></pre>
+                  </div>
+                </div>
+              </div>
+              <div class="timeline-checkpoints">
+                <div class="schema-group-title" style="margin-bottom: 14px;">Action Checklist</div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">1</div>
+                  <div class="checkpoint-content">
+                    <h4>Run gitnexus_detect_changes</h4>
+                    <p>Map staged file edits to execution processes.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">2</div>
+                  <div class="checkpoint-content">
+                    <h4>Audit Side Effects & Leakages</h4>
+                    <p>Verify no unrelated capability flows are flagged as affected.</p>
+                  </div>
+                </div>
+                <div class="timeline-checkpoint-item" onclick="toggleCheckpoint(this)">
+                  <div class="checkpoint-number">3</div>
+                  <div class="checkpoint-content">
+                    <h4>Execute Targeted Process Tests</h4>
+                    <p>Prioritize testing key affected system communities.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= SECTION: CLI BUILDER ================= -->
+      <section id="cli-section" class="playbook-section">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--primary)">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/>
+                </svg>
+                CLI Command Builder & Simulation Terminal
+              </h2>
+              <p class="card-subtitle">Generate correct syntax and preview index operations dynamically</p>
+            </div>
+          </div>
+
+          <div class="cli-builder-grid">
+            <!-- Parameter Selection Form -->
+            <div class="cli-form">
+              <div class="form-group">
+                <label for="cli-action">CLI Command Action</label>
+                <select id="cli-action" class="form-select">
+                  <option value="analyze" selected>analyze (Index repository files and relations)</option>
+                  <option value="status">status (Check KuzuDB index integrity & staleness)</option>
+                  <option value="clean">clean (Delete index directories and clear cache)</option>
+                  <option value="wiki">wiki (Export graph markdown knowledge base)</option>
+                  <option value="list">list (Print registered workspace repositories)</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="cli-params-container">
+                <label>Options / Flags</label>
+                <div class="checkbox-group">
+                  <label class="checkbox-label" id="lbl-embeddings">
+                    <input type="checkbox" id="flag-embeddings" checked>
+                    <span>--embeddings</span>
+                  </label>
+                  <label class="checkbox-label" id="lbl-force">
+                    <input type="checkbox" id="flag-force">
+                    <span>--force</span>
+                  </label>
+                  <label class="checkbox-label" id="lbl-shallow" style="display: flex;">
+                    <input type="checkbox" id="flag-shallow">
+                    <span>--shallow</span>
+                  </label>
+                  <label class="checkbox-label" id="lbl-quiet" style="display: flex;">
+                    <input type="checkbox" id="flag-quiet">
+                    <span>--quiet</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group" id="cli-inputs-container" style="display: none;">
+                <label for="cli-path-arg">Custom Directory Path</label>
+                <input type="text" id="cli-path-arg" class="form-input" placeholder="e.g. ./src/auth">
+              </div>
+            </div>
+
+            <!-- Simulation Terminal Mock -->
+            <div class="terminal-mock">
+              <div class="terminal-header">
+                <div class="terminal-dots">
+                  <span class="terminal-dot dot-red"></span>
+                  <span class="terminal-dot dot-yellow"></span>
+                  <span class="terminal-dot dot-green"></span>
+                </div>
+                <span class="terminal-title">powershell - GitNexus CLI</span>
+              </div>
+              <div class="terminal-body">
+                <div class="terminal-input-line">
+                  <span class="terminal-prompt">PS C:\wonderful-faraday></span>
+                  <span class="terminal-command-string" id="terminal-cmd">npx gitnexus analyze --embeddings</span>
+                </div>
+                
+                <div class="cli-progress-bar" id="terminal-progress">
+                  <div class="cli-progress-fill" id="terminal-progress-fill"></div>
+                </div>
+
+                <div class="terminal-output" id="terminal-output-text">Ready to simulate. Click "Run Command" below.</div>
+                
+                <button class="terminal-run-btn" id="btn-run-cli">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <span>Run Command</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= SECTION: IDE SETUP & GUIDES ================= -->
+      <section id="ide-setup-section" class="playbook-section">
+        <div class="card ide-setup glassmorphic">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--primary)">
+                  <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/>
+                </svg>
+                Developer IDE Setup & Guides
+              </h2>
+              <p class="card-subtitle">Configure Cursor, Claude Code, and Windsurf IDEs with GitNexus automation</p>
+            </div>
+          </div>
+
+          <div class="ide-setup-layout">
+            <!-- IDE Selection Tabs -->
+            <div class="ide-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+              <button class="ide-tab active" data-ide="cursor">Cursor (.cursorrules)</button>
+              <button class="ide-tab" data-ide="claude">Claude Code (config.json)</button>
+              <button class="ide-tab" data-ide="windsurf">Windsurf (workspace rules)</button>
+            </div>
+
+            <div class="ide-display-grid">
+              <!-- IDE Config Snippet & Guide -->
+              <div class="ide-panel">
+                <div class="code-container" style="margin: 0;">
+                  <div class="code-header">
+                    <span class="code-lang-tag" id="ide-lang-tag" style="color: var(--primary);">JSON</span>
+                    <button class="code-copy-btn" id="btn-copy-ide-config">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy Config</span>
+                    </button>
+                  </div>
+                  <div class="code-content" style="min-height: 200px; background: #07090e; overflow-y: auto; max-height: 300px;">
+                    <pre><code id="ide-config-text" style="color: #c9d1d9; font-size: 13px; font-family: var(--font-mono); white-space: pre-wrap;">{
+  "version": "1.0.0",
+  "rules": [
+    "Always consult the GitNexus graph context before implementing edits.",
+    "Run upstream impact checks prior to editing high-risk symbols."
+  ]
+}</code></pre>
+                  </div>
+                </div>
+
+                <div class="ide-instructions" style="margin-top: 20px;">
+                  <div class="ide-guide-title" id="ide-title" style="font-weight: bold; margin-bottom: 8px; color: var(--primary);">Cursor .cursorrules Configuration</div>
+                  <p class="ide-guide-text" id="ide-description" style="color: var(--text-muted); font-size: 13.5px; line-height: 1.6;">
+                    Place this file in the root of your workspace as <code>.cursorrules</code>. It informs Cursor's internal agent to always prioritize graph-based GitNexus commands for context discovery and pre-change impact checks, guaranteeing high accuracy and context efficiency.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= SECTION: AGENT SKILLS HUB ================= -->
+      <section id="skills-section" class="playbook-section">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--primary)">
+                  <path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.07 19.58 10.47 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+                </svg>
+                AI Agent Skills & Prompt Synthesizer
+              </h2>
+              <p class="card-subtitle">Understand how autonomous developer agents utilize GitNexus intelligence</p>
+            </div>
+          </div>
+
+          <div class="alert-box tip" style="margin-bottom: 24px;">
+            <div class="alert-title">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/>
+              </svg>
+              Agentic Context Window Efficiency
+            </div>
+            <div class="alert-content">
+              Instead of dumping entire source files into an LLM's context window, GitNexus skills supply agents with targeted AST call structures, impact maps, and execution paths. This slashes token usage by up to 90% and eliminates agent hallucinations.
+            </div>
+          </div>
+
+          <!-- Skills Selection Grid -->
+          <div class="skills-grid">
+            <div class="skill-card active" data-skill="cli">
+              <div class="skill-icon">CLI</div>
+              <h3 class="skill-title">gitnexus-cli</h3>
+              <p class="skill-desc">Manages index analysis, staleness checks, and repository registration pipelines.</p>
+            </div>
+            <div class="skill-card" data-skill="exploring">
+              <div class="skill-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+              </div>
+              <h3 class="skill-title">gitnexus-exploring</h3>
+              <p class="skill-desc">Locates architectural controllers and groups files by modular Louvain communities.</p>
+            </div>
+            <div class="skill-card" data-skill="impact">
+              <div class="skill-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+              </div>
+              <h3 class="skill-title">gitnexus-impact-analysis</h3>
+              <p class="skill-desc">Enforces mandatory upstream blast radius safety checks before code edits.</p>
+            </div>
+            <div class="skill-card" data-skill="refactoring">
+              <div class="skill-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/></svg>
+              </div>
+              <h3 class="skill-title">gitnexus-refactoring</h3>
+              <p class="skill-desc">Executes coordinated multi-file AST renames and modular refactoring trees safely.</p>
+            </div>
+            <div class="skill-card" data-skill="debugging">
+              <div class="skill-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg>
+              </div>
+              <h3 class="skill-title">gitnexus-debugging</h3>
+              <p class="skill-desc">Traces chronological execution processes and maps asynchronous failure throw sites.</p>
+            </div>
+            <div class="skill-card" data-skill="guide">
+              <div class="skill-icon">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+              </div>
+              <h3 class="skill-title">gitnexus-guide</h3>
+              <p class="skill-desc">A reference library detailing KuzuDB graph schema keys and compliant trigger workflows.</p>
+            </div>
+          </div>
+
+          <!-- Dynamic Skill Content Display -->
+          <div class="skill-details-container" id="skill-detail-panel">
+            <div class="skill-detail-header">
+              <h4 id="detail-skill-title">gitnexus-cli</h4>
+              <span class="skill-type-badge">MCP Skill</span>
+            </div>
+            <div class="skill-detail-body">
+              <div class="detail-block">
+                <h5>Primary Agent Action Checklist</h5>
+                <ul class="detail-checklist" id="detail-skill-checklist">
+                  <li>Verify physical registry mappings inside <code>~/.gitnexus/registry.json</code>.</li>
+                  <li>Check index age and staleness bounds.</li>
+                  <li>Perform full AST analysis, refreshing the local KuzuDB representation.</li>
+                </ul>
+              </div>
+              <div class="detail-block">
+                <h5>Utilized MCP Tools & Resource Targets</h5>
+                <div class="tools-badges-container" id="detail-skill-tools">
+                  <span class="tool-badge">npx gitnexus status</span>
+                  <span class="tool-badge">npx gitnexus analyze</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 40px; margin-bottom: 20px;">
+            <h3 style="font-size: 16px; margin-bottom: 6px;">Human-to-Agent Prompt Synthesizer</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">
+              Select an engineering goal and enter code context details below. The synthesizer generates an optimized system instruction ensuring the AI agent utilizes its specialized GitNexus skills.
+            </p>
+
+            <div class="synthesizer-layout">
+              <!-- Left Column: Inputs Form -->
+              <div class="synthesizer-form">
+                <div class="form-group">
+                  <label for="synth-goal">Engineering Task / Goal</label>
+                  <select id="synth-goal" class="form-select">
+                    <option value="explore" selected>Onboard & Explore Architecture</option>
+                    <option value="impact">Safety Pre-Check (Blast Radius Analysis)</option>
+                    <option value="rename">Coordinated Multi-File AST Rename</option>
+                    <option value="debug">Trace Stack Trace / Exception</option>
+                  </select>
+                </div>
+                
+                <div class="form-group" id="group-concept">
+                  <label for="synth-concept">Target Feature or Concept</label>
+                  <input type="text" id="synth-concept" class="form-input" value="jwt authentication pipeline">
+                </div>
+
+                <div class="form-group" id="group-symbol" style="display: none;">
+                  <label for="synth-symbol">Symbol Name (Function/Class/Method)</label>
+                  <input type="text" id="synth-symbol" class="form-input" value="validateUserSession">
+                </div>
+
+                <div class="form-group" id="group-newname" style="display: none;">
+                  <label for="synth-newname">New Symbol Name</label>
+                  <input type="text" id="synth-newname" class="form-input" value="authenticateSession">
+                </div>
+
+                <div class="form-group" id="group-error" style="display: none;">
+                  <label for="synth-error">Error Message / Stack Trace Hint</label>
+                  <input type="text" id="synth-error" class="form-input" value="TypeError: Cannot read properties of undefined (reading 'jwt')">
+                </div>
+              </div>
+
+              <!-- Right Column: Output Prompt Preview -->
+              <div class="synthesizer-preview">
+                <div class="code-container" style="margin: 0; display: flex; flex-direction: column; height: 100%;">
+                  <div class="code-header">
+                    <span class="code-lang-tag" style="color: var(--primary);">AGENT TRIGGER PROMPT</span>
+                    <button class="code-copy-btn" id="btn-copy-prompt">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                      <span>Copy Prompt</span>
+                    </button>
+                  </div>
+                  <div class="code-content" style="flex-grow: 1; min-height: 140px; background: #07090e;">
+                    <pre><code id="prompt-output-text" style="color: #c9d1d9; white-space: pre-wrap; font-size: 12.5px;">...</code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Zero-Server Architecture Block -->
+          <div style="margin-top: 48px;">
+            <h3 style="font-size: 16px; margin-bottom: 6px;">Zero-Server Client-Side Engine</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">
+              GitNexus enables serverless, fully client-side code graphs inside your browser. Here is how it parses local file streams directly in memory.
+            </p>
+
+            <div class="zero-server-flow-container">
+              <div class="flow-step">
+                <div class="flow-step-num">1</div>
+                <div class="flow-step-content">
+                  <h4>Decompress ZIP</h4>
+                  <p>Read repository files locally inside the browser using memory-efficient streams.</p>
+                </div>
+              </div>
+              <div class="flow-connector">
+                <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+              </div>
+              <div class="flow-step">
+                <div class="flow-step-num">2</div>
+                <div class="flow-step-content">
+                  <h4>Browser AST Parser</h4>
+                  <p>Parse language tokens directly using Web-Assembly compiled Tree-sitter engines.</p>
+                </div>
+              </div>
+              <div class="flow-connector">
+                <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+              </div>
+              <div class="flow-step">
+                <div class="flow-step-num">3</div>
+                <div class="flow-step-content">
+                  <h4>Graph In-Memory</h4>
+                  <p>Compile nodes & call edges, triggering the offline Graph RAG Agent locally.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= SECTION: CHEATSHEET HUB ================= -->
+      <section id="cheatsheet-section" class="playbook-section">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--primary)">
+                  <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/>
+                </svg>
+                GitNexus Developer Cheat Sheet
+              </h2>
+              <p class="card-subtitle">Quick-reference code triggers, commands, and standard patterns</p>
+            </div>
+          </div>
+
+          <!-- Controls: Category Chips + Live Filter -->
+          <div class="cheat-sheet-controls">
+            <div class="filter-chips">
+              <span class="filter-chip active" data-category="all">All Cards</span>
+              <span class="filter-chip" data-category="resource">Diagnostic Resources</span>
+              <span class="filter-chip" data-category="analysis">Impact Analysis</span>
+              <span class="filter-chip" data-category="refactor">Refactoring</span>
+              <span class="filter-chip" data-category="debug">Debugging</span>
+              <span class="filter-chip" data-category="cli">CLI commands</span>
+            </div>
+          </div>
+
+          <!-- Cheat Sheet Dynamic Grid -->
+          <div class="cheat-sheet-grid" id="cheat-grid">
+            <!-- Cards will be populated by JS -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Stack Container -->
+  <div class="toast-container" id="toast-stack"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

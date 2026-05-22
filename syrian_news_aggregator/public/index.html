@@ -267,6 +267,7 @@
                       <th>رابط الموقع</th>
                       <th>تغذية RSS</th>
                       <th>الاستراتيجية</th>
+                      <th>آخر فحص</th>
                       <th>الحالة</th>
                       <th>الإجراءات</th>
                     </tr>
@@ -645,7 +646,12 @@
 
           <div class="form-group">
             <label for="inp-src-url">رابط الصفحة الرئيسية للموقع</label>
-            <input type="url" id="inp-src-url" placeholder="https://sana.sy" required>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" id="inp-src-url" placeholder="https://sana.sy" required style="flex: 1;">
+              <button type="button" id="btn-auto-detect" class="btn btn-outline-purple" style="min-width: 130px; font-family: 'Tajawal', sans-serif;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> كشف تلقائي
+              </button>
+            </div>
           </div>
 
           <div class="form-group">

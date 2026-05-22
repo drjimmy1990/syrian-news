@@ -349,9 +349,156 @@ async function fetchArticles(sources, maxArticles = 3) {
   return allArticles;
 }
 
+/**
+ * Automatically probes a URL to discover the best scraping strategy.
+ * @param {string} baseUrl Target website main URL
+ * @returns {Promise<Object>} Detected strategy, suggested name, rssUrl, and selectors.
+ */
+async function autoDetectStrategy(baseUrl) {
+  let url = baseUrl.trim();
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  url = url.replace(/\/$/, '');
+
+  console.log(`[Scraper Detect] Auto-detecting strategy for: ${url}`);
+  
+  // 1. Check if WordPress API is supported
+  try {
+    const wpProbe = await probeWordPressAPI(url);
+    if (wpProbe.supported) {
+      let siteTitle = 'موقع ووردبريس جديد';
+      try {
+        const wpInfo = await axios.get(`${url}/wp-json/`, { 
+          timeout: 4000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+        if (wpInfo.data && wpInfo.data.name) {
+          siteTitle = wpInfo.data.name;
+        }
+      } catch (e) {}
+
+      return {
+        success: true,
+        strategy: 'wp_api',
+        name: siteTitle,
+        rssUrl: `${url}/feed`,
+        encoding: 'utf-8',
+        selectors: {
+          list: { container: 'article', title: 'h2.entry-title a', link: 'a' },
+          article: { title: 'h1.entry-title', content: '.entry-content', date: 'time' }
+        }
+      };
+    }
+  } catch (error) {
+    console.error(`[Scraper Detect] WP API probe failed: ${error.message}`);
+  }
+
+  // 2. Fetch page HTML to search for RSS feeds and site title
+  let html = '';
+  let siteTitle = '';
+  try {
+    html = await fetchPageContent(url, 'utf-8');
+    const $ = cheerio.load(html);
+    siteTitle = $('title').text().trim();
+    if (siteTitle) {
+      siteTitle = siteTitle.replace(/\s*[|\-–]\s*.*$/, '').trim();
+    }
+  } catch (error) {
+    console.error(`[Scraper Detect] HTML fetch failed: ${error.message}`);
+  }
+
+  if (!siteTitle) {
+    try {
+      const parsedUrl = new URL(url);
+      siteTitle = parsedUrl.hostname.replace('www.', '');
+    } catch (e) {
+      siteTitle = 'مصدر إخباري جديد';
+    }
+  }
+
+  // 3. Scan HTML link alternate tags for RSS/Atom
+  if (html) {
+    try {
+      const $ = cheerio.load(html);
+      let discoveredRssUrl = null;
+      
+      $('link[type="application/rss+xml"], link[type="application/atom+xml"], link[type="text/xml"]').each((i, el) => {
+        const href = $(el).attr('href');
+        if (href) discoveredRssUrl = href;
+      });
+
+      if (discoveredRssUrl) {
+        if (!discoveredRssUrl.startsWith('http')) {
+          const parsed = new URL(url);
+          discoveredRssUrl = `${parsed.protocol}//${parsed.host}${discoveredRssUrl.startsWith('/') ? '' : '/'}${discoveredRssUrl}`;
+        }
+        
+        console.log(`[Scraper Detect] Found RSS URL in HTML link tags: ${discoveredRssUrl}`);
+        return {
+          success: true,
+          strategy: 'rss',
+          name: siteTitle,
+          rssUrl: discoveredRssUrl,
+          encoding: 'utf-8',
+          selectors: {
+            list: { container: 'article', title: 'h2 a', link: 'a' },
+            article: { title: 'h1', content: '.content', date: 'time' }
+          }
+        };
+      }
+    } catch (err) {
+      console.error(`[Scraper Detect] Scanning link tags failed: ${err.message}`);
+    }
+  }
+
+  // 4. Try common RSS feed path guesses
+  const commonFeedPaths = ['/feed', '/rss', '/rss.xml', '/feed/'];
+  for (const pathGuess of commonFeedPaths) {
+    try {
+      const feedUrl = `${url}${pathGuess}`;
+      const res = await axios.get(feedUrl, { 
+        timeout: 3000, 
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } 
+      });
+      if (res.status === 200 && typeof res.data === 'string' && (res.data.includes('<rss') || res.data.includes('<feed') || res.data.includes('<?xml'))) {
+        console.log(`[Scraper Detect] Guessed valid RSS URL: ${feedUrl}`);
+        return {
+          success: true,
+          strategy: 'rss',
+          name: siteTitle,
+          rssUrl: feedUrl,
+          encoding: 'utf-8',
+          selectors: {
+            list: { container: 'article', title: 'h2 a', link: 'a' },
+            article: { title: 'h1', content: '.content', date: 'time' }
+          }
+        };
+      }
+    } catch (e) {
+      // silent fail
+    }
+  }
+
+  // 5. Fallback to raw Cheerio HTML Crawl
+  console.log(`[Scraper Detect] Fallback to HTML crawl strategy`);
+  return {
+    success: true,
+    strategy: 'html',
+    name: siteTitle,
+    rssUrl: null,
+    encoding: 'utf-8',
+    selectors: {
+      list: { container: 'article', title: 'h2 a', link: 'a' },
+      article: { title: 'h1', content: '.content', date: 'time' }
+    }
+  };
+}
+
 module.exports = {
   probeWordPressAPI,
   fetchPageContent,
   fetchArticles,
-  extractFullArticleContent
+  extractFullArticleContent,
+  autoDetectStrategy
 };
