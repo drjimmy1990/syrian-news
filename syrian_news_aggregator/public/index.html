@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم | مجمع الأخبار السورية الذكي</title>
+  <!-- Google Fonts Outfit & Tajawal for Premium Multilingual Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-satellite-dish"></i>
+        </div>
+        <div class="brand-text">
+          <h2>مجمع الأخبار</h2>
+          <span>الذكاء الاصطناعي السوري</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-menu">
+        <a href="#overview" class="menu-item active" data-tab="overview">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>نظرة عامة</span>
+        </a>
+        <a href="#sources" class="menu-item" data-tab="sources">
+          <i class="fa-solid fa-list-check"></i>
+          <span>مصادر الأخبار</span>
+        </a>
+        <a href="#articles" class="menu-item" data-tab="articles">
+          <i class="fa-solid fa-database"></i>
+          <span>سجل المقالات</span>
+        </a>
+        <a href="#settings" class="menu-item" data-tab="settings">
+          <i class="fa-solid fa-sliders"></i>
+          <span>إعدادات النظام</span>
+        </a>
+        <a href="#terminal" class="menu-item" data-tab="terminal">
+          <i class="fa-solid fa-terminal"></i>
+          <span>منفذ الأوامر المباشر</span>
+        </a>
+        <a href="#integration" class="menu-item" data-tab="integration">
+          <i class="fa-solid fa-network-wired"></i>
+          <span>تكامل n8n و Cron</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btn-trigger-run" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-play"></i>
+          <span>تشغيل يدوي للدمج</span>
+        </button>
+        <div class="system-status">
+          <span class="status-dot online"></span>
+          <span>خادم لوحة التحكم متصل</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Bar Header -->
+      <header class="main-header">
+        <div class="header-title">
+          <h1 id="page-title-text">لوحة التحكم</h1>
+          <p id="page-subtitle-text">مراقبة وإدارة مجمع الأخبار السوري والنشر التلقائي عبر الووردبريس</p>
+        </div>
+        
+        <div class="header-actions">
+          <button id="btn-test-wp-top" class="btn btn-outline" title="فحص اتصال ووردبريس">
+            <i class="fa-brands fa-wordpress"></i>
+            <span>اتصال WP</span>
+          </button>
+          <button id="btn-test-ai-top" class="btn btn-outline" title="فحص اتصال OpenAI">
+            <i class="fa-solid fa-brain"></i>
+            <span>اتصال AI</span>
+          </button>
+          <div class="user-profile">
+            <div class="profile-info">
+              <span>مشرف الدمج</span>
+              <small>الوضع النشط</small>
+            </div>
+            <div class="avatar">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable Content Window -->
+      <div class="content-viewport">
+
+        <!-- TAB 1: OVERVIEW -->
+        <section id="tab-overview" class="tab-panel active">
+          <!-- Stats Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon purple">
+                <i class="fa-solid fa-newspaper"></i>
+              </div>
+              <div class="stat-info">
+                <h3>إجمالي المقالات المؤرشفة</h3>
+                <h2 id="stat-total-processed">0</h2>
+                <p>مخزنة في قاعدة SQLite</p>
+              </div>
+              <div class="card-glow purple"></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon green">
+                <i class="fa-brands fa-wordpress"></i>
+              </div>
+              <div class="stat-info">
+                <h3>المقالات المنشورة بـ WP</h3>
+                <h2 id="stat-total-published">0</h2>
+                <p>تم ترحيلها بنجاح</p>
+              </div>
+              <div class="card-glow green"></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon blue">
+                <i class="fa-solid fa-satellite"></i>
+              </div>
+              <div class="stat-info">
+                <h3>إجمالي مصادر الأخبار</h3>
+                <h2 id="stat-total-sources">0</h2>
+                <p><span id="stat-active-sources">0</span> مصدر نشط حالياً</p>
+              </div>
+              <div class="card-glow blue"></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon orange">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div class="stat-info">
+                <h3>حماية التكرار</h3>
+                <h2>%100</h2>
+                <p>بمؤشر Jaccard الذكي (0.85)</p>
+              </div>
+              <div class="card-glow orange"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Grid -->
+          <div class="dashboard-grid">
+            <!-- Source Breakdown Card -->
+            <div class="panel glass-card font-tajawal">
+              <div class="panel-header">
+                <h2>إحصائيات الأرشفة حسب المصدر</h2>
+                <span class="badge badge-info">تقارير حية</span>
+              </div>
+              <div class="panel-body">
+                <div class="table-container custom-scroll">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>المصدر الإخباري</th>
+                        <th>المقالات المؤرشفة</th>
+                        <th>تم ترحيلها بنجاح</th>
+                        <th>نسبة النجاح</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbl-source-stats-body">
+                      <tr>
+                        <td colspan="4" class="text-center py-4">جاري تحميل إحصائيات المصادر...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions & Status -->
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>حالة خوادم الربط الخارجي</h2>
+              </div>
+              <div class="panel-body">
+                <div class="connection-status-list">
+                  
+                  <div class="connection-item">
+                    <div class="connection-icon">
+                      <i class="fa-brands fa-wordpress"></i>
+                    </div>
+                    <div class="connection-details">
+                      <h4>خادم بوابة ووردبريس WordPress</h4>
+                      <p id="lbl-wp-status">جاري فحص الاتصال التلقائي...</p>
+                    </div>
+                    <span id="dot-wp-status" class="status-dot warning"></span>
+                  </div>
+
+                  <div class="connection-item">
+                    <div class="connection-icon">
+                      <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div class="connection-details">
+                      <h4>ذكاء اصطناعي OpenAI API</h4>
+                      <p id="lbl-ai-status">جاري فحص الاتصال التلقائي...</p>
+                    </div>
+                    <span id="dot-ai-status" class="status-dot warning"></span>
+                  </div>
+
+                  <div class="connection-item">
+                    <div class="connection-icon">
+                      <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="connection-details">
+                      <h4>مستودع SQLite المحلي</h4>
+                      <p id="lbl-db-status">قاعدة البيانات نشطة وجاهزة</p>
+                    </div>
+                    <span class="status-dot online"></span>
+                  </div>
+
+                </div>
+
+                <div class="dashboard-actions">
+                  <h3>إجراءات سريعة</h3>
+                  <div class="btn-group">
+                    <button id="btn-quick-run" class="btn btn-primary">
+                      <i class="fa-solid fa-bolt"></i> تشغيل الدمج المباشر
+                    </button>
+                    <button id="btn-quick-prune" class="btn btn-outline-danger">
+                      <i class="fa-solid fa-trash-can"></i> تنظيف الأرشفة القديمة (90 يوم)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: NEWS SOURCES -->
+        <section id="tab-sources" class="tab-panel">
+          <div class="panel glass-card">
+            <div class="panel-header">
+              <h2>إدارة مصادر الأخبار السورية</h2>
+              <button id="btn-add-source-modal" class="btn btn-success">
+                <i class="fa-solid fa-plus"></i> إضافة مصدر جديد
+              </button>
+            </div>
+            <div class="panel-body">
+              <div class="filter-bar">
+                <div class="search-input-wrapper">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="input-search-sources" placeholder="البحث في المصادر...">
+                </div>
+              </div>
+              <div class="table-container custom-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>اسم الموقع</th>
+                      <th>رابط الموقع</th>
+                      <th>تغذية RSS</th>
+                      <th>الاستراتيجية</th>
+                      <th>الحالة</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbl-sources-body">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: ARTICLES SQLITE LOGS -->
+        <section id="tab-articles" class="tab-panel">
+          <div class="panel glass-card">
+            <div class="panel-header">
+              <h2>سجل المقالات والبيانات المؤرشفة</h2>
+              <span class="badge badge-purple" id="lbl-articles-count">0 مقال</span>
+            </div>
+            <div class="panel-body">
+              <!-- Advanced Filters -->
+              <div class="filter-grid">
+                <div class="form-group">
+                  <label for="filter-article-search">بحث بالكلمة المفتاحية</label>
+                  <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="filter-article-search" placeholder="ابحث في العناوين أو الروابط...">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="filter-article-source">المصدر الإخباري</label>
+                  <select id="filter-article-source">
+                    <option value="">جميع المصادر</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="filter-article-status">حالة الترحيل</label>
+                  <select id="filter-article-status">
+                    <option value="">جميع الحالات</option>
+                    <option value="published">منشور بـ WordPress</option>
+                    <option value="processed">مؤرشف محلياً فقط</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Articles Table -->
+              <div class="table-container custom-scroll py-2">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>العنوان</th>
+                      <th>المصدر</th>
+                      <th>رابط المصدر الأصلي</th>
+                      <th>تاريخ الأرشفة</th>
+                      <th>رقم WP</th>
+                      <th>الحالة</th>
+                      <th>تفاصيل</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbl-articles-body">
+                    <!-- Dynamic article logs -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination Footer -->
+              <div class="pagination-footer">
+                <span class="pagination-info" id="lbl-pagination-info">جاري التحميل...</span>
+                <div class="pagination-buttons">
+                  <button id="btn-page-prev" class="btn btn-outline btn-sm"><i class="fa-solid fa-chevron-right"></i> السابق</button>
+                  <button id="btn-page-next" class="btn btn-outline btn-sm">التالي <i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: SYSTEM SETTINGS -->
+        <section id="tab-settings" class="tab-panel">
+          <div class="settings-layout">
+            
+            <!-- WordPress Config -->
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>إعدادات بوابة ووردبريس WordPress REST API</h2>
+              </div>
+              <div class="panel-body">
+                <form id="form-config-wp">
+                  <div class="form-group">
+                    <label for="inp-wp-url">رابط الووردبريس الأصلي (Base WordPress URL)</label>
+                    <input type="url" id="inp-wp-url" placeholder="https://example.com" required>
+                    <small>الرابط الرئيسي لموقعك الإخباري المبني على ووردبريس.</small>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-wp-username">اسم مستخدم المشرف (Admin Username)</label>
+                    <input type="text" id="inp-wp-username" placeholder="admin" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-wp-password">كلمة مرور التطبيق (WordPress Application Password)</label>
+                    <div class="password-input-wrapper">
+                      <input type="password" id="inp-wp-password" placeholder="xxxx xxxx xxxx xxxx" required>
+                      <button type="button" class="btn-toggle-password"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                    <small>يجب توليد كلمة مرور التطبيق من خلال لوحة تحكم الووردبريس الخاصة بك: الأعضاء -> حسابك -> كلمات مرور التطبيق.</small>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group flex-1">
+                      <label for="inp-wp-status">حالة المقالات الافتراضية</label>
+                      <select id="inp-wp-status">
+                        <option value="draft">مسودة (Draft) - ننصح بها للمراجعة</option>
+                        <option value="publish">نشر فوري وتلقائي (Publish)</option>
+                      </select>
+                    </div>
+                    <div class="form-group flex-1">
+                      <label for="inp-wp-dryrun">وضع الفحص والتجريب (Dry Run)</label>
+                      <select id="inp-wp-dryrun">
+                        <option value="true">تفعيل - تشغيل افتراضي دون نشر فعلي لموقعك</option>
+                        <option value="false">تعطيل - النشر الحقيقي والتلقائي بموقعك مباشرة</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-actions pt-2">
+                    <button type="button" id="btn-test-wp" class="btn btn-outline-primary"><i class="fa-solid fa-plug"></i> فحص الاتصال الآن</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات ووردبريس</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- OpenAI AI Config -->
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>إعدادات صياغة المقالات الذكية (OpenAI API)</h2>
+              </div>
+              <div class="panel-body">
+                <form id="form-config-ai">
+                  <div class="form-group">
+                    <label class="switch-container">
+                      <input type="checkbox" id="inp-ai-enabled">
+                      <span class="switch-slider"></span>
+                      <span class="switch-label">تفعيل إعادة صياغة الأخبار عبر الذكاء الاصطناعي قبل نشرها</span>
+                    </label>
+                    <small class="d-block pt-1">سيقوم النظام بإرسال المقال إلى OpenAI لصياغته بالكامل بأسلوب تحريري خاص بجريدتك الإخبارية لمنع حقوق الملكية أو التكرار اللغوي.</small>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-ai-key">مفتاح واجهة برمجة التطبيقات (OpenAI API Key)</label>
+                    <div class="password-input-wrapper">
+                      <input type="password" id="inp-ai-key" placeholder="sk-proj-............................">
+                      <button type="button" class="btn-toggle-password"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group flex-1">
+                      <label for="inp-ai-model">النموذج اللغوي (Model)</label>
+                      <select id="inp-ai-model">
+                        <option value="gpt-4o-mini">gpt-4o-mini (اقتصادي، فائق السرعة، وممتاز للعربية - مستحسن)</option>
+                        <option value="gpt-4o">gpt-4o (قوة تحريرية متكاملة واحترافية عالية جداً)</option>
+                        <option value="o1-mini">o1-mini (قوة التفكير والاستدلال في الصياغات المعقدة)</option>
+                      </select>
+                    </div>
+                    <div class="form-group flex-1">
+                      <label for="inp-ai-dryrun">الوضع التجريبي الفوري (Offline Mock)</label>
+                      <select id="inp-ai-dryrun">
+                        <option value="true">تفعيل - محاكاة الصياغة محلياً دون استهلاك رصيد API</option>
+                        <option value="false">تعطيل - استخدام OpenAI API حقيقي لإعادة الصياغة</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-ai-prompt">موجه الصياغة التحريرية المخصص (System Prompt Template)</label>
+                    <textarea id="inp-ai-prompt" rows="4" placeholder="اكتب التعليمات التحريرية الموجهة للذكاء الاصطناعي هنا..."></textarea>
+                    <small>استخدم <code>{content}</code> في المكان المناسب لإدخال نص المقال الأصلي ديناميكياً.</small>
+                  </div>
+                  <div class="form-actions pt-2">
+                    <button type="button" id="btn-test-ai" class="btn btn-outline-primary"><i class="fa-solid fa-plug"></i> فحص صلاحية مفتاح API</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات الذكاء الاصطناعي</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- General Config -->
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>إعدادات النظام العامة وقواعد البيانات</h2>
+              </div>
+              <div class="panel-body">
+                <form id="form-config-general">
+                  <div class="form-group">
+                    <label for="inp-gen-db">مسار قاعدة بيانات SQLite (SQLite DB File Path)</label>
+                    <input type="text" id="inp-gen-db" placeholder="news_aggregator.db" required>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group flex-1">
+                      <label for="inp-gen-delay">زمن التأخير الاحترازي بين المواقع (ms)</label>
+                      <input type="number" id="inp-gen-delay" min="100" max="60000" required>
+                    </div>
+                    <div class="form-group flex-1">
+                      <label for="inp-gen-max-articles">الحد الأقصى للمقالات لكل مصدر</label>
+                      <input type="number" id="inp-gen-max-articles" min="1" max="50" required>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <small>زمن التأخير يمنع الحظر العشوائي، والحد الأقصى (ننصح بـ 3) يسرع عمليات الجلب والتحديث بشكل هائل.</small>
+                  </div>
+                  <div class="form-actions pt-2">
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات العامة</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- TAB 5: LIVE TERMINAL -->
+        <section id="tab-terminal" class="tab-panel">
+          <div class="panel glass-card">
+            <div class="panel-header">
+              <h2>منفذ ومنسق الأوامر الإجرائي للدمج</h2>
+              <div class="terminal-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <select id="select-terminal-source" style="background: rgba(20, 10, 35, 0.85); color: #e0d5f5; border: 1px solid rgba(138, 75, 245, 0.5); border-radius: 6px; padding: 6px 12px; font-family: 'Tajawal', sans-serif; font-size: 13px; outline: none; cursor: pointer; transition: all 0.3s ease; min-width: 180px; box-shadow: 0 0 10px rgba(138, 75, 245, 0.1);">
+                  <option value="">كل المصادر المفعّلة</option>
+                </select>
+                <button id="btn-terminal-clear" class="btn btn-outline btn-sm"><i class="fa-solid fa-eraser"></i> مسح سجل Terminal</button>
+                <button id="btn-terminal-run" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt"></i> بدء الدمج وجلب الأخبار الآن</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <p class="text-muted pb-2">اضغط على زر التشغيل للبدء بجلب أحدث المقالات من جميع المصادر المفعّلة. سيتم تحديث قاعدة البيانات والنشر مباشرة، وستشاهد العملية خطوة بخطوة بالأسفل:</p>
+              
+              <!-- Premium Glowing Terminal -->
+              <div class="terminal-console-wrapper">
+                <div class="terminal-header">
+                  <div class="terminal-dots">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                  </div>
+                  <span class="terminal-title">syrian_news_aggregator@runner.js: ~</span>
+                  <div class="terminal-status" id="terminal-pulse">
+                    <span class="pulse-dot"></span>
+                    <span id="terminal-status-text">جاهز لبدء العملية</span>
+                  </div>
+                </div>
+                <div class="terminal-body custom-scroll" id="terminal-output-container">
+                  <div class="terminal-line system-line">[نظام الأرشفة] جاهز للعمل. في انتظار أوامر المشرف...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 6: INTEGRATION CENTER -->
+        <section id="tab-integration" class="tab-panel">
+          <div class="integration-layout">
+            
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>تشغيل خادم ووردبريس ومجمع الأخبار كخدمة تلقائية (Cron Job)</h2>
+              </div>
+              <div class="panel-body font-tajawal">
+                <h3>1. تشغيل العملية التلقائية عبر المنفذ الصامت (CLI Cron)</h3>
+                <p>يمكنك جدولة المجمع للعمل كل 15 دقيقة صامتاً دون تشغيل لوحة التحكم، وذلك لتحديث موقعك بالأخبار باستمرار:</p>
+                <div class="code-block-wrapper">
+                  <button class="btn-copy-code" data-clipboard="node index.js --cron"><i class="fa-regular fa-copy"></i> نسخ</button>
+                  <pre><code>node index.js --cron</code></pre>
+                </div>
+
+                <h3 class="pt-3">2. جدولتها في أنظمة Linux / Unix (Crontab)</h3>
+                <p>افتح ملف الجدولة عبر <code>crontab -e</code> ثم أضف السطر التالي للتشغيل التلقائي كل 15 دقيقة:</p>
+                <div class="code-block-wrapper">
+                  <button class="btn-copy-code" data-clipboard="*/15 * * * * cd /path/to/syrian_news_aggregator && node index.js --cron >> cron_logs.log 2>&1"><i class="fa-regular fa-copy"></i> نسخ</button>
+                  <pre><code>*/15 * * * * cd /path/to/syrian_news_aggregator && node index.js --cron >> cron_logs.log 2>&1</code></pre>
+                </div>
+
+                <h3 class="pt-3">3. جدولتها في أنظمة Windows (Task Scheduler)</h3>
+                <p>افتح <strong>مجدول المهام (Task Scheduler)</strong> في ويندوز وقم بإنشاء مهمة جديدة:</p>
+                <ul>
+                  <li><strong>الإجراء (Action)</strong>: بدء برنامج (Start a Program)</li>
+                  <li><strong>البرنامج/البرمجة (Program/Script)</strong>: <code>node</code></li>
+                  <li><strong>الوسيطات (Add Arguments)</strong>: <code>index.js --cron</code></li>
+                  <li><strong>الدليل الافتراضي (Start in)</strong>: المسار الكامل لمجلد <code>syrian_news_aggregator</code></li>
+                  <li><strong>المشغل (Trigger)</strong>: التكرار كل 15 دقيقة بشكل مستمر.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>التكامل التلقائي مع منصة الميكنة البصرية n8n</h2>
+              </div>
+              <div class="panel-body font-tajawal">
+                <p>إذا كنت تفضل جدولة هذه العملية بالكامل وبصرياً عبر <strong>n8n</strong>، فقد وفرنا لك تكاملاً متكاملاً بمستوى احترافي عالي الدقة:</p>
+                
+                <div class="n8n-features">
+                  <div class="n8n-feature-item">
+                    <i class="fa-solid fa-file-import text-success"></i>
+                    <div>
+                      <h4>مخطط n8n الجاهز للاستيراد الفوري</h4>
+                      <p>ستجد ملفاً جاهزاً باسم <code>n8n_workflow.json</code> داخل مجلد المشروع.</p>
+                    </div>
+                  </div>
+                  <div class="n8n-feature-item">
+                    <i class="fa-solid fa-book-open text-primary"></i>
+                    <div>
+                      <h4>دليل n8n التفصيلي المتكامل</h4>
+                      <p>قم بفتح الملف الإرشادي المخصص <code>n8n_guide.md</code> لتتعلم كيفية رفع المخطط وتهيئة خيارات الحساب والاتصال خطوة بخطوة بالصور التوضيحية.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-info">
+                  <i class="fa-solid fa-circle-info alert-icon"></i>
+                  <div class="alert-content">
+                    <strong>نصيحة ذهبية:</strong> يتيح لك تكامل n8n تتبع العملية بصرياً بالكامل والربط مع خدمات أخرى كإرسال الأخبار لقنوات التليجرام أو الواتساب أو تويتر فور نشرها بالووردبريس تلقائياً!
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ARTICLE VIEW MODAL -->
+  <div id="modal-view-article" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <h2 id="modal-article-title">عنوان الخبر</h2>
+        <button class="modal-close btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body custom-scroll">
+        <div class="article-meta-info font-tajawal">
+          <div><strong>المصدر الأصلي:</strong> <span id="modal-article-source">-</span></div>
+          <div><strong>تاريخ الأرشفة:</strong> <span id="modal-article-date">-</span></div>
+          <div><strong>رقم معرّف ووردبريس:</strong> <span id="modal-article-wpid">-</span></div>
+          <div><strong>الرابط الأصلي:</strong> <a id="modal-article-link" href="#" target="_blank">زيارة رابط المصدر <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div>
+        </div>
+        
+        <div class="article-comparison-grid">
+          <div class="article-box">
+            <h3>محتوى المقال التحريري النهائي</h3>
+            <div id="modal-article-body" class="article-render-area text-justify">
+              <!-- Rendered post body -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-close-modal">إغلاق النافذة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT SOURCE MODAL -->
+  <div id="modal-source-form" class="modal-overlay">
+    <div class="modal-container medium">
+      <div class="modal-header">
+        <h2 id="modal-source-title">إضافة مصدر إخباري جديد</h2>
+        <button class="modal-close btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-source-editor">
+        <input type="hidden" id="inp-source-index">
+        <div class="modal-body custom-scroll font-tajawal">
+          
+          <div class="form-group">
+            <label for="inp-src-name">اسم الموقع الإخباري</label>
+            <input type="text" id="inp-src-name" placeholder="مثال: وكالة سانا" required>
+          </div>
+
+          <div class="form-group">
+            <label for="inp-src-url">رابط الصفحة الرئيسية للموقع</label>
+            <input type="url" id="inp-src-url" placeholder="https://sana.sy" required>
+          </div>
+
+          <div class="form-group">
+            <label for="inp-src-rss">رابط تغذية الـ RSS (اختياري)</label>
+            <input type="url" id="inp-src-rss" placeholder="https://sana.sy/?feed=rss2">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="inp-src-strategy">استراتيجية الاستخراج</label>
+              <select id="inp-src-strategy">
+                <option value="wp_api">ووردبريس REST API (ذكي، فائق الكفاءة)</option>
+                <option value="rss">تحليل تغذية RSS XML (مستقر ومضمون)</option>
+                <option value="html">مستخرج زحف HTML (Cheerio CSS Crawl)</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="inp-src-encoding">ترميز المحتوى</label>
+              <select id="inp-src-encoding">
+                <option value="utf-8">UTF-8 (قياسي، لغالبية المواقع)</option>
+                <option value="windows-1256">Windows-1256 (ترميز عربي قديم)</option>
+                <option value="iso-8859-6">ISO-8859-6 (ترميز عربي إقليمي)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Selectors Collapsible Header -->
+          <div class="selectors-collapsible pt-2">
+            <h3><i class="fa-solid fa-scissors"></i> محددات محتوى صفحة المقال (CSS Selectors)</h3>
+            <p class="text-muted pb-2">مخصصة لاستخراج المحتوى الكامل وتجاوز ملخصات RSS القصيرة أو عمليات زحف HTML:</p>
+            
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="inp-sel-list-container">حاوية مقال القائمة</label>
+                <input type="text" id="inp-sel-list-container" placeholder="article">
+              </div>
+              <div class="form-group flex-1">
+                <label for="inp-sel-list-title">محدد رابط عنوان القائمة</label>
+                <input type="text" id="inp-sel-list-title" placeholder="h2 a">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="inp-sel-art-content">حاوية المقال الكامل بالداخل</label>
+                <input type="text" id="inp-sel-art-content" placeholder=".entry-content">
+              </div>
+              <div class="form-group flex-1">
+                <label for="inp-sel-art-date">محدد تاريخ المقال بالداخل</label>
+                <input type="text" id="inp-sel-art-date" placeholder="time">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group pt-2">
+            <label class="switch-container">
+              <input type="checkbox" id="inp-src-enabled" checked>
+              <span class="switch-slider"></span>
+              <span class="switch-label">المصدر نشط ومفعّل في عملية الدمج القادمة</span>
+            </label>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline btn-close-modal">إلغاء</button>
+          <button type="submit" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> حفظ المصدر</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ISOLATED TEST SCRAPE MODAL -->
+  <div id="modal-test-scrape" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <h2 id="modal-test-title">فحص واختبار جلب البيانات محلياً</h2>
+        <button class="modal-close btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body custom-scroll font-tajawal">
+        <div class="test-source-info-panel mb-3 p-3 bg-dark-deep rounded border-1 border-gray">
+          <div class="info-row d-flex justify-content-between">
+            <div><strong>اسم المصدر:</strong> <span id="test-info-name" class="badge badge-purple">-</span></div>
+            <div><strong>استراتيجية الجلب:</strong> <span id="test-info-strategy" class="badge badge-info">-</span></div>
+          </div>
+        </div>
+
+        <div id="test-scrape-loading" class="test-loading-state py-4 text-center">
+          <i class="fa-solid fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+          <p class="font-tajawal text-white">جاري جلب البيانات وفحص المحددات حالياً مباشرة من السيرفر المصدر...</p>
+          <small class="text-muted">قد تستغرق هذه العملية عدة ثواني بناءً على سرعة استجابة السيرفر المصدر.</small>
+        </div>
+
+        <div id="test-scrape-error" class="alert alert-danger d-none mb-0">
+          <i class="fa-solid fa-triangle-exclamation"></i> <strong>فشل الجلب الفردي:</strong> <span id="test-error-message"></span>
+        </div>
+
+        <div id="test-scrape-results" class="d-none">
+          <div class="test-articles-count-summary mb-3 p-2 bg-success-glow rounded d-flex align-items-center">
+            <span class="text-success"><i class="fa-solid fa-circle-check"></i> تم العثور على </span>
+            <strong id="test-results-count" class="text-white mx-1">0</strong>
+            <span class="text-success"> مقالات في الاستعلام التجريبي (بحد أقصى مقالتين).</span>
+          </div>
+
+          <div class="test-articles-list" id="test-articles-container">
+            <!-- Scraped Articles populate here dynamically -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-close-modal">إغلاق النافذة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION WRAPPER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Dashboard Script -->
+  <script src="app.js"></script>
+</body>
+</html>

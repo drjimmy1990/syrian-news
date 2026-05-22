@@ -1,0 +1,219 @@
+{
+  "name": "Syrian News Aggregator AI Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "1d8a176e-5735-430c-ab23-f36de4cf75cc",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.enabbaladi.net/feed"
+      },
+      "id": "2e9a2b5a-4712-421b-801b-c12da9f935da",
+      "name": "Read RSS Feed",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        280,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT id FROM processed_articles WHERE url_hash = '{{ $json.link }}' OR title_hash = '{{ $json.title }}';"
+      },
+      "id": "3d9a3c6b-5813-432c-912c-d23da0f046eb",
+      "name": "SQLite Deduplication Check",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-local-db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "4e0a4d7c-6924-443d-a23d-e34da1f157fc",
+      "name": "If New Article?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "content": "أنت صحفي محترف. أعد صياغة الخبر التالي باللغة العربية الفصحى بأسلوب احترافي وجذاب مع الحفاظ على الدقة والمصداقية وتجنب التكرار. احتفظ بهيكل الـ HTML كما هو دون تغيير الوسوم."
+            },
+            {
+              "role": "user",
+              "content": "=Title: {{ $node[\"Read RSS Feed\"].json[\"title\"] }}\n\nContent:\n{{ $node[\"Read RSS Feed\"].json[\"content\"] }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "5f1a5e8d-7035-454d-b34d-f45da2f268fd",
+      "name": "AI Rewrite (OpenAI LLM)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        820,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-token-creds"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "title": "= {{ $node[\"Read RSS Feed\"].json[\"title\"] }}",
+        "content": "= <div class=\"syrian-news-article\" style=\"direction: rtl; text-align: right; font-family: tahoma, sans-serif; line-height: 1.8;\">\n  <div class=\"article-body-content\">\n    {{ $json[\"choices\"][0][\"message\"][\"content\"] }}\n  </div>\n  <hr class=\"wp-block-separator\" style=\"margin: 30px 0; border: none; border-top: 1px solid #ddd;\" />\n  <blockquote class=\"wp-block-quote source-attribution\" style=\"border-right: 4px solid #0056b3; border-left: none; padding-right: 15px; margin: 20px 0; background-color: #f9f9f9; padding: 15px 20px; border-radius: 4px;\">\n    <p style=\"margin: 0 0 10px 0; font-size: 14px; color: #555;\">\n      هذا الخبر مستورد تلقائياً عبر نظام التجميع والنشـر التلقائي من موقع:\n      <strong style=\"color: #0056b3;\">{{ $node[\"Read RSS Feed\"].json[\"source_name\"] || \"عنب بلدي\" }}</strong>\n    </p>\n    <p style=\"margin: 0 0 10px 0; font-size: 13px; color: #777;\">\n      تاريخ النشـر الأصلي: <span>{{ $node[\"Read RSS Feed\"].json[\"isoDate\"] }}</span>\n    </p>\n    <p style=\"margin: 0; font-size: 14px;\">\n      المصدر الأصلي للخبر:\n      <a href=\"{{ $node[\"Read RSS Feed\"].json[\"link\"] }}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #0056b3; text-decoration: underline; font-weight: bold;\">\n        اضغط هنا لزيارة الرابط الأصلي\n      </a>\n    </p>\n  </blockquote>\n</div>",
+        "status": "draft"
+      },
+      "id": "6a2b6f9e-8146-465e-c45e-056da3f379fe",
+      "name": "WordPress Create Post",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ],
+      "credentials": {
+        "wordpressApi": {
+          "id": "wordpress-app-pass"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO processed_articles (title, url, normalized_url, url_hash, title_hash, content_hash, source_name, published_at, wordpress_post_id, status)\nVALUES ('{{ $node[\"Read RSS Feed\"].json[\"title\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"link\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"link\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"link\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"title\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"title\"] }}', '{{ $node[\"Read RSS Feed\"].json[\"source_name\"] || \"عنب بلدي\" }}', '{{ $node[\"Read RSS Feed\"].json[\"isoDate\"] }}', {{ $json.id }}, 'published');"
+      },
+      "id": "7b3c7a0f-9257-476f-d56f-167da4f48a0f",
+      "name": "Log to SQLite Database",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        200
+      ],
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-local-db"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read RSS Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "SQLite Deduplication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQLite Deduplication Check": {
+      "main": [
+        [
+          {
+            "node": "If New Article?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New Article?": {
+      "main": [
+        [
+          {
+            "node": "AI Rewrite (OpenAI LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "AI Rewrite (OpenAI LLM)": {
+      "main": [
+        [
+          {
+            "node": "WordPress Create Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress Create Post": {
+      "main": [
+        [
+          {
+            "node": "Log to SQLite Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
