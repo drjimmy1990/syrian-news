@@ -144,6 +144,36 @@ class WordPressPublisher {
       }
     };
   }
+
+  /**
+   * Delete or trash a post in WordPress by ID using REST API
+   */
+  async deletePost(postId) {
+    if (this.isDryRun || !this.wpUrl || !this.authHeader) {
+      console.log(`[Publisher Mock] Simulating trashing post ID ${postId} from WordPress...`);
+      return { success: true, isMock: true };
+    }
+
+    const endpoint = `${this.wpUrl.replace(/\/$/, '')}/wp-json/wp/v2/posts/${postId}`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': this.authHeader
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`WordPress API Error [${response.status}]: ${errorData.message || response.statusText}`);
+      }
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
 }
 
 module.exports = WordPressPublisher;

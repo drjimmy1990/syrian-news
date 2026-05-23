@@ -63,11 +63,12 @@ app.get('/api/config', (req, res) => {
 app.post('/api/config', (req, res) => {
   try {
     const config = readConfig();
-    const { wordpress, aiRewriter, general } = req.body;
+    const { wordpress, aiRewriter, general, n8n } = req.body;
     
     if (wordpress) config.wordpress = wordpress;
     if (aiRewriter) config.aiRewriter = aiRewriter;
     if (general) config.general = general;
+    if (n8n) config.n8n = n8n;
     
     saveConfig(config);
     res.json({ success: true, message: 'Settings saved successfully!' });
@@ -161,6 +162,18 @@ app.get('/api/articles', (req, res) => {
       countStr += ' AND status = ?';
       params.push(status);
     }
+
+    if (req.query.dateFrom) {
+      queryStr += ' AND processed_at >= ?';
+      countStr += ' AND processed_at >= ?';
+      params.push(req.query.dateFrom);
+    }
+
+    if (req.query.dateTo) {
+      queryStr += ' AND processed_at <= ?';
+      countStr += ' AND processed_at <= ?';
+      params.push(req.query.dateTo);
+    }
     
     // Get total count for pagination
     const totalRow = dbConnection.prepare(countStr).get(...params);
@@ -187,6 +200,260 @@ app.get('/api/articles', (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   } finally {
     if (dbConnection) dbConnection.close();
+  }
+});
+
+/**
+ * DELETE /api/articles/clean - Purge all articles from database
+ */
+app.delete('/api/articles/clean', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const deletedCount = ds.deleteAllArticles();
+    ds.close();
+    res.json({ success: true, message: `تم حذف ${deletedCount} مقال بنجاح.`, deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/articles/by-date - Delete articles in a date range
+ */
+app.delete('/api/articles/by-date', (req, res) => {
+  const { startDate, endDate } = req.body;
+  if (!startDate || !endDate) {
+    return res.status(400).json({ success: false, error: 'يرجى تحديد تاريخ البداية والنهاية.' });
+  }
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const deletedCount = ds.deleteArticlesByDateRange(startDate, endDate);
+    ds.close();
+    res.json({ success: true, message: `تم حذف ${deletedCount} مقال.`, deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/articles/by-source - Delete all articles from a specific source
+ */
+app.delete('/api/articles/by-source', (req, res) => {
+  const { sourceName } = req.body;
+  if (!sourceName) {
+    return res.status(400).json({ success: false, error: 'يرجى تحديد اسم المصدر.' });
+  }
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const deletedCount = ds.deleteArticlesBySource(sourceName);
+    ds.close();
+    res.json({ success: true, message: `تم حذف ${deletedCount} مقال من ${sourceName}.`, deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/articles/stats - Detailed article statistics
+ */
+app.get('/api/articles/stats', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const stats = ds.getArticleStats();
+    ds.close();
+    res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/articles/:id - Delete an article from database (and optionally WordPress)
+ */
+app.delete('/api/articles/:id', async (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  const id = parseInt(req.params.id);
+  const deleteFromWP = req.query.deleteFromWP === 'true';
+
+  if (isNaN(id)) {
+    return res.status(400).json({ success: false, error: 'Invalid article ID.' });
+  }
+
+  let dbConnection;
+  try {
+    dbConnection = new Database(dbPath);
+    const ds = new Datastore(dbPath);
+    
+    // Fetch article by ID
+    const article = dbConnection.prepare('SELECT * FROM processed_articles WHERE id = ?').get(id);
+    if (!article) {
+      ds.close();
+      return res.status(404).json({ success: false, error: 'Article not found.' });
+    }
+
+    // Optionally delete from WordPress via REST API
+    if (deleteFromWP && article.wordpress_post_id) {
+      console.log(`[Server] Request to delete post ID ${article.wordpress_post_id} from WordPress...`);
+      const WordPressPublisher = require('./publisher');
+      const publisher = new WordPressPublisher(config.wordpress || {});
+      const wpResult = await publisher.deletePost(article.wordpress_post_id);
+      
+      if (!wpResult.success) {
+        console.error(`[Server Warning] WordPress deletion failed: ${wpResult.error}`);
+        // We warn and log but still proceed to let them clean up the local database record
+      }
+    }
+
+    // Delete locally from SQLite datastore
+    const deleted = ds.deleteArticle(id);
+    ds.close();
+
+    if (deleted) {
+      res.json({ success: true, message: 'Article deleted successfully!' });
+    } else {
+      res.status(500).json({ success: false, error: 'Failed to delete article from local database.' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (dbConnection) dbConnection.close();
+  }
+});
+
+/**
+ * PUT /api/articles/:id - Update article content (used by n8n AI rewriting workflow)
+ */
+app.put('/api/articles/:id', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  const id = parseInt(req.params.id);
+
+  if (isNaN(id)) {
+    return res.status(400).json({ success: false, error: 'Invalid article ID.' });
+  }
+
+  const { content, status, wordpress_post_id } = req.body;
+  if (!content && !status && (wordpress_post_id === undefined)) {
+    return res.status(400).json({ success: false, error: 'يرجى تحديد محتوى أو حالة للتحديث.' });
+  }
+
+  try {
+    const ds = new Datastore(dbPath);
+    const updated = ds.updateArticleContent(id, { content, status, wordpress_post_id });
+    ds.close();
+
+    if (updated) {
+      res.json({ success: true, message: 'تم تحديث المقال بنجاح.' });
+    } else {
+      res.status(404).json({ success: false, error: 'المقال غير موجود.' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/sources/ai-detect - AI-powered selector discovery using LLM
+ */
+app.post('/api/sources/ai-detect', async (req, res) => {
+  const { url, selectors, strategy } = req.body;
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'Target URL is required.' });
+  }
+
+  try {
+    const config = readConfig();
+
+    // 1. If selectors & strategy are present, save back results (from n8n callback)
+    if (selectors) {
+      const parsedSelectors = typeof selectors === 'string' ? JSON.parse(selectors) : selectors;
+      const sourceIndex = config.sources.findIndex(s => 
+        s.url.replace(/\/$/, '') === url.replace(/\/$/, '') || 
+        s.name.toLowerCase() === url.toLowerCase()
+      );
+
+      if (sourceIndex !== -1) {
+        config.sources[sourceIndex].selectors = parsedSelectors;
+        config.sources[sourceIndex].strategy = strategy || 'html';
+        config.sources[sourceIndex].lastTestedAt = new Date().toISOString();
+        config.sources[sourceIndex].lastTestStatus = 'success';
+        saveConfig(config);
+        console.log(`[n8n Callback] Successfully updated source selectors for: ${config.sources[sourceIndex].name}`);
+        return res.json({ success: true, message: 'Successfully updated source selectors from n8n callback!', source: config.sources[sourceIndex] });
+      } else {
+        return res.status(404).json({ success: false, error: 'Source not found for the provided URL to update.' });
+      }
+    }
+
+    // 2. Otherwise, run detection
+    const n8nConfig = config.n8n || {};
+    if (n8nConfig.enabled && n8nConfig.selectorsWebhookUrl) {
+      console.log(`[n8n Trigger] Forwarding AI selector discovery for ${url} to n8n webhook`);
+      
+      const payload = {
+        targetUrl: url,
+        aggregatorBaseUrl: req.protocol + '://' + req.get('host')
+      };
+
+      try {
+        // Trigger n8n webhook
+        const n8nResponse = await axios.post(n8nConfig.selectorsWebhookUrl, payload, { timeout: 25000 });
+        
+        // Check if n8n returned the result synchronously
+        const n8nData = n8nResponse.data;
+        if (n8nData && (n8nData.selectors || (n8nData.success && n8nData.result))) {
+          const result = n8nData.selectors || n8nData.result;
+          return res.json({ 
+            success: true, 
+            isN8n: true,
+            result: {
+              strategy: n8nData.strategy || 'html',
+              selectors: result,
+              confidence: n8nData.confidence || 0.9,
+              reasoning: n8nData.reasoning || 'تم الكشف بنجاح عبر سيرفر أتمتة n8n.'
+            } 
+          });
+        }
+
+        // Otherwise it is asynchronous, n8n will post back to this endpoint
+        return res.json({ 
+          success: true, 
+          isN8n: true,
+          async: true,
+          message: 'تم تشغيل سيرفر أتمتة n8n بنجاح! سيتم تحديث المحددات تلقائياً في الخلفية عند اكتمال التحليل.'
+        });
+      } catch (err) {
+        console.error(`[n8n Error] Failed triggering webhook: ${err.message}`);
+        throw new Error(`فشل الاتصال بسيرفر أتمتة n8n: ${err.message}`);
+      }
+    }
+
+    // 3. Fallback to local AI Analyzer if n8n is not enabled
+    const aiConfig = config.aiRewriter || {};
+    const AIDOMAnalyzer = require('./ai_analyzer');
+    const analyzer = new AIDOMAnalyzer({
+      apiKey: aiConfig.apiKey || '',
+      model: aiConfig.model || 'gpt-4o-mini',
+      isDryRun: aiConfig.isDryRun !== false
+    });
+
+    const { fetchPageContent } = require('./scraper');
+    const html = await fetchPageContent(url, 'utf-8', 15000);
+    const result = await analyzer.analyzeDOM(html, url);
+    
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error(`[Server Error] AI detect failed: ${error.message}`);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -351,11 +618,66 @@ app.post('/api/sources/auto-detect', async (req, res) => {
   }
 
   try {
+    const config = readConfig();
     const { autoDetectStrategy } = require('./scraper');
-    const result = await autoDetectStrategy(url);
-    res.json(result);
+    const result = await autoDetectStrategy(url, config);
+    
+    // If autoDetectStrategy falls back to heuristics (strategy = 'html') and validation found 0 articles,
+    // we should route to n8n or AI as a more robust fallback!
+    if (result && result.success && result.strategy === 'html' && 
+        (!result.validationResult || result.validationResult.articlesFound === 0)) {
+        
+        console.log(`[Server] Standard heuristics failed for ${url}. Falling back to robust AI/n8n...`);
+        const n8nConfig = config.n8n || {};
+        
+        if (n8nConfig.enabled && n8nConfig.selectorsWebhookUrl) {
+          const axios = require('axios');
+          const payload = { targetUrl: url, aggregatorBaseUrl: req.protocol + '://' + req.get('host') };
+          try {
+            const n8nResponse = await axios.post(n8nConfig.selectorsWebhookUrl, payload, { timeout: 25000 });
+            const n8nData = n8nResponse.data;
+            if (n8nData && (n8nData.selectors || (n8nData.success && n8nData.result))) {
+              const aiResult = n8nData.selectors || n8nData.result;
+              return res.json({
+                success: true,
+                isN8n: true,
+                result: {
+                  strategy: n8nData.strategy || 'html',
+                  selectors: aiResult,
+                  confidence: n8nData.confidence || 0.9,
+                  reasoning: n8nData.reasoning || 'تم الكشف بنجاح عبر سيرفر أتمتة n8n.'
+                }
+              });
+            }
+            return res.json({ 
+              success: true, isN8n: true, async: true,
+              message: 'تم تشغيل سيرفر أتمتة n8n بنجاح! سيتم تحديث المحددات تلقائياً في الخلفية عند اكتمال التحليل.'
+            });
+          } catch (e) {
+            console.error(`[n8n Fallback Error] ${e.message}`);
+          }
+        }
+        
+        // Local AI Fallback
+        const aiConfig = config.aiRewriter || {};
+        if (aiConfig.enabled && aiConfig.apiKey) {
+           const AIDOMAnalyzer = require('./ai_analyzer');
+           const analyzer = new AIDOMAnalyzer({ apiKey: aiConfig.apiKey, model: aiConfig.model || 'gpt-4o-mini', isDryRun: aiConfig.isDryRun !== false });
+           const { fetchPageContent } = require('./scraper');
+           try {
+             const html = await fetchPageContent(url, 'utf-8', 15000);
+             const aiLocalResult = await analyzer.analyzeDOM(html, url);
+             return res.json({ success: true, result: aiLocalResult });
+           } catch(e) {
+             console.error(`[Local AI Fallback Error] ${e.message}`);
+           }
+        }
+    }
+    
+    // Return original result if no robust fallback available or needed
+    res.json({ success: true, result });
   } catch (error) {
-    console.error(`[Server Error] Auto-detect failed:`, error);
+    console.error(`[Server Error] Auto-detect failed: ${error.message}`);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -383,16 +705,22 @@ app.post('/api/sources/:index/test', async (req, res) => {
     // Save test diagnostics metadata
     source.lastTestedAt = new Date().toISOString();
     source.lastTestStatus = 'success';
+    source.consecutiveFailures = 0; // Reset on success
     delete source.lastTestError;
     saveConfig(config);
 
+    // Distinguish: true success (has articles) vs "empty success" (connected but 0 articles — likely selector mismatch)
+    const hasArticles = articles.length > 0;
     res.json({
       success: true,
+      hasArticles,
+      warning: !hasArticles ? 'تم الاتصال بالمصدر بنجاح لكن لم يتم العثور على أي مقالات. قد يعني هذا أن محددات CSS غير صحيحة أو أن الصفحة فارغة.' : null,
       sourceName: source.name,
       strategy: source.strategy,
       articlesCount: articles.length,
       lastTestedAt: source.lastTestedAt,
       lastTestStatus: source.lastTestStatus,
+      consecutiveFailures: 0,
       articles: articles.map(art => ({
         title: art.title,
         url: art.url,
@@ -402,12 +730,13 @@ app.post('/api/sources/:index/test', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error(`[Server Error] Isolated test scraping failed:`, error);
+    console.error(`[Server Error] Isolated test scraping failed: ${error.message}`);
     
-    // Save failed test diagnostics metadata
+    // Save failed test diagnostics metadata — increment consecutive failures
     source.lastTestedAt = new Date().toISOString();
     source.lastTestStatus = 'failed';
     source.lastTestError = error.message;
+    source.consecutiveFailures = (source.consecutiveFailures || 0) + 1;
     saveConfig(config);
 
     res.json({ 
@@ -415,7 +744,8 @@ app.post('/api/sources/:index/test', async (req, res) => {
       error: `Scraping failed: ${error.message}`,
       lastTestedAt: source.lastTestedAt,
       lastTestStatus: source.lastTestStatus,
-      lastTestError: source.lastTestError
+      lastTestError: source.lastTestError,
+      consecutiveFailures: source.consecutiveFailures
     });
   }
 });
@@ -441,6 +771,7 @@ app.get('/api/run-stream', (req, res) => {
   
   const config = readConfig();
   const sourceIndex = req.query.sourceIndex;
+  const sinceDate = req.query.sinceDate;
   let activeSources = [];
   let isSingleTest = false;
   
@@ -456,7 +787,16 @@ app.get('/api/run-stream', (req, res) => {
       return;
     }
   } else {
-    activeSources = config.sources.filter(s => s.enabled);
+    // Filter: enabled AND not repeatedly broken (skip sources with 3+ consecutive failures)
+    const rawActive = config.sources.filter(s => s.enabled);
+    const skippedBroken = rawActive.filter(s => (s.consecutiveFailures || 0) >= 3);
+    activeSources = rawActive.filter(s => (s.consecutiveFailures || 0) < 3);
+    
+    if (skippedBroken.length > 0) {
+      skippedBroken.forEach(s => {
+        sendLog(`⚠️ Skipping "${s.name}" — ${s.consecutiveFailures} consecutive failures. Run an isolated test to re-enable.`, 'error');
+      });
+    }
   }
   
   if (activeSources.length === 0) {
@@ -495,7 +835,8 @@ app.get('/api/run-stream', (req, res) => {
     wpConfig: config.wordpress || {},
     rewriterConfig: config.aiRewriter || {},
     rateLimitDelay: config.general ? config.general.rateLimitDelay : 1500,
-    maxArticlesPerSource: config.general ? (config.general.maxArticlesPerSource || 3) : 3
+    maxArticlesPerSource: config.general ? (config.general.maxArticlesPerSource || 3) : 3,
+    sinceDate: sinceDate || null
   };
   
   // If it's a single test run, force safe non-mutation dry-run options!

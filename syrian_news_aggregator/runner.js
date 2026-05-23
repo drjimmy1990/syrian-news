@@ -27,7 +27,8 @@ async function runPipeline(options = {}) {
     wpConfig = {},
     rewriterConfig = {},
     rateLimitDelay = 1500,
-    maxArticlesPerSource = 3
+    maxArticlesPerSource = 3,
+    sinceDate = null
   } = options;
 
   console.log(`[Runner] Starting pipeline execution for ${sources.length} sources...`);
@@ -75,7 +76,7 @@ async function runPipeline(options = {}) {
       
       try {
         // Fetch articles from the source (returns formatted Article schemas)
-        const articles = await fetchArticles([source], maxArticlesPerSource);
+        const articles = await fetchArticles([source], maxArticlesPerSource, sinceDate);
         console.log(`[Runner] Found ${articles.length} articles for ${source.name}`);
         
         for (const article of articles) {
@@ -86,6 +87,10 @@ async function runPipeline(options = {}) {
           if (isDuplicate) {
             console.log(`[Runner] Duplicate detected. Skipping: "${article.title}" (${article.url})`);
             stats.duplicatesSkipped++;
+            // Backfill content for articles stored before content column existed
+            if (article.content) {
+              db.saveArticle(article);
+            }
             continue;
           }
 

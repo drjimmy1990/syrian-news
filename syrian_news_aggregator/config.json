@@ -18,6 +18,11 @@
     "rateLimitDelay": 1500,
     "maxArticlesPerSource": 3
   },
+  "n8n": {
+    "enabled": false,
+    "selectorsWebhookUrl": "",
+    "rewriteWebhookUrl": ""
+  },
   "sources": [
     {
       "name": "عنب بلدي",
@@ -37,27 +42,34 @@
           "content": ".entry-content",
           "date": ".post-date time"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T00:59:39.176Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
-      "name": "جريدة الوطن السورية",
+      "name": "alwatanonline.com",
       "url": "https://www.alwatanonline.com",
-      "rssUrl": "https://www.alwatanonline.com/feed",
+      "rssUrl": null,
       "strategy": "html",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
-          "container": ".post-item",
-          "title": "h3.post-title a",
+          "container": "article",
+          "title": "h2 a",
           "link": "a"
         },
         "article": {
-          "title": "h1.single-post-title",
-          "content": ".post-content",
-          "date": ".post-date"
+          "title": "h1",
+          "content": ".content",
+          "date": "time"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T02:52:52.641Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "timeout of 8000ms exceeded",
+      "consecutiveFailures": 1
     },
     {
       "name": "الدفاع المدني السوري",
@@ -77,7 +89,10 @@
           "content": ".content-body",
           "date": "span.created"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T00:59:49.015Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "الوكالة العربية السورية للأنباء (سانا)",
@@ -97,7 +112,10 @@
           "content": ".entry-content",
           "date": "time.entry-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T00:59:52.162Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "الإخبارية السورية",
@@ -117,7 +135,10 @@
           "content": ".post-content",
           "date": ".post-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T00:59:53.839Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "تلفزيون سوريا",
@@ -137,12 +158,15 @@
           "content": ".post-content",
           "date": ".date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T00:59:56.997Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "زمان الوصل",
       "url": "https://www.zamanalwsl.net",
-      "rssUrl": "https://www.zamanalwsl.net/rss.html",
+      "rssUrl": "https://www.zamanalwsl.net/rss",
       "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
@@ -150,14 +174,17 @@
         "list": {
           "container": ".news-item",
           "title": "h2 a",
-          "link": "h2 a"
+          "link": "a"
         },
         "article": {
-          "title": "h1.title",
+          "title": "h1",
           "content": ".news-content",
           "date": ".news-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T02:54:04.850Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "شبكة شام الإخبارية",
@@ -177,7 +204,11 @@
           "content": ".post-content",
           "date": ".post-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T02:55:43.821Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "WP-API strategy failed (response.data.map is not a function) and RSS fallback failed (Attribute without value\nLine: 10\nColumn: 71\nChar: /)",
+      "consecutiveFailures": 3
     },
     {
       "name": "أثر برس",
@@ -185,7 +216,10 @@
       "rssUrl": "https://www.athrpress.com/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T02:55:13.996Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "سناك سوري",
@@ -193,7 +227,10 @@
       "rssUrl": "https://snacksyrian.com/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:17.634Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "حلب اليوم",
@@ -201,7 +238,10 @@
       "rssUrl": "https://halabtodaytv.net/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:20.021Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "نداء بوست",
@@ -209,7 +249,11 @@
       "rssUrl": "https://nedaa-post.com/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:21.403Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "WP-API strategy failed (Request failed with status code 404) and RSS fallback failed (Request failed with status code 404)",
+      "consecutiveFailures": 2
     },
     {
       "name": "صوت العاصمة",
@@ -217,7 +261,10 @@
       "rssUrl": "https://damascusv.com/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:24.130Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "شبكة نداء الفرات",
@@ -225,7 +272,10 @@
       "rssUrl": "https://furat-sy.com/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:26.076Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "فرات بوست",
@@ -233,15 +283,33 @@
       "rssUrl": "https://euphratespost.net/ar/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:27.367Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
-      "name": "الخابور",
+      "name": "الرئيسية",
       "url": "https://alkhabour.com/public/ar",
-      "rssUrl": "https://alkhabour.com/public/ar/feed",
-      "strategy": "wp_api",
+      "rssUrl": null,
+      "strategy": "html",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:28.373Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".content",
+          "date": "time"
+        }
+      }
     },
     {
       "name": "صحيفة الفرات",
@@ -249,7 +317,11 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:30.412Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "response.data.map is not a function",
+      "consecutiveFailures": 2
     },
     {
       "name": "صحيفة الثورة",
@@ -269,7 +341,10 @@
           "content": ".content-body",
           "date": ".created"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:00:31.418Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "صحيفة الوحدة",
@@ -277,7 +352,11 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:32.655Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "Request failed with status code 404",
+      "consecutiveFailures": 2
     },
     {
       "name": "صحيفة العروبة",
@@ -285,7 +364,11 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:35.900Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "response.data.map is not a function",
+      "consecutiveFailures": 2
     },
     {
       "name": "وكالة سوريا الجديدة",
@@ -293,7 +376,10 @@
       "rssUrl": "https://nsasyr.net/feed",
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:39.772Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "سيريا لايف",
@@ -301,7 +387,10 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:42.153Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "سوكة نيوز",
@@ -309,7 +398,10 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:43.924Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "اخبار سوريا - الجزيرة",
@@ -317,7 +409,11 @@
       "rssUrl": "https://www.aljazeera.net/feed/rss/where/mideast/arab/syria/",
       "strategy": "rss",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:00:52.540Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "timeout of 8000ms exceeded",
+      "consecutiveFailures": 2
     },
     {
       "name": "أخبار سوريا - العربية",
@@ -337,7 +433,11 @@
           "content": ".article-body",
           "date": ".date-format"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:00:54.100Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "Request failed with status code 403",
+      "consecutiveFailures": 2
     },
     {
       "name": "عربي 21- سوريا",
@@ -357,7 +457,11 @@
           "content": ".story-body",
           "date": ".story-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:00:54.931Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "read ECONNRESET",
+      "consecutiveFailures": 2
     },
     {
       "name": "العربي الجديد - سوريا",
@@ -377,7 +481,11 @@
           "content": ".story-content",
           "date": ".pub-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:00:56.089Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "read ECONNRESET",
+      "consecutiveFailures": 2
     },
     {
       "name": "الحدث - سوريا",
@@ -397,7 +505,11 @@
           "content": ".article-body",
           "date": ".date-info"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:00:57.187Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "Request failed with status code 403",
+      "consecutiveFailures": 2
     },
     {
       "name": "سيرياديز",
@@ -417,7 +529,10 @@
           "content": ".news_text",
           "date": ".news_date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:01:01.135Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "الشرق - سوريا",
@@ -437,7 +552,10 @@
           "content": ".article-body",
           "date": ".article-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:01:02.629Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "سوريا اونلاين",
@@ -445,7 +563,11 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:01:04.696Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "Request failed with status code 404",
+      "consecutiveFailures": 2
     },
     {
       "name": "السوري",
@@ -453,7 +575,11 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:01:07.811Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "Request failed with status code 404",
+      "consecutiveFailures": 2
     },
     {
       "name": "صحيفة الحرية",
@@ -461,7 +587,10 @@
       "rssUrl": null,
       "strategy": "wp_api",
       "enabled": true,
-      "encoding": "utf-8"
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-23T01:01:10.944Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "الترا سوريا",
@@ -481,7 +610,10 @@
           "content": ".content-body",
           "date": ".created-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:01:12.616Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     },
     {
       "name": "العربي - سوريا",
@@ -501,7 +633,34 @@
           "content": ".story-text",
           "date": ".story-date"
         }
-      }
+      },
+      "lastTestedAt": "2026-05-23T01:01:21.847Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "timeout of 8000ms exceeded",
+      "consecutiveFailures": 2
+    },
+    {
+      "name": "بوابة أخبار اليوم الإلكترونية",
+      "url": "https://akhbarelyom.com/",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "lastTestedAt": "2026-05-23T01:01:23.212Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0
     }
   ]
 }

@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dotWpStatus: document.getElementById('dot-wp-status'),
     lblAiStatus: document.getElementById('lbl-ai-status'),
     dotAiStatus: document.getElementById('dot-ai-status'),
+    lblN8nStatus: document.getElementById('lbl-n8n-status'),
+    dotN8nStatus: document.getElementById('dot-n8n-status'),
     btnTestWpTop: document.getElementById('btn-test-wp-top'),
     btnTestAiTop: document.getElementById('btn-test-ai-top'),
 
@@ -55,11 +57,23 @@ document.addEventListener('DOMContentLoaded', () => {
     filterArticleSearch: document.getElementById('filter-article-search'),
     filterArticleSource: document.getElementById('filter-article-source'),
     filterArticleStatus: document.getElementById('filter-article-status'),
+    filterDateFrom: document.getElementById('filter-date-from'),
+    filterDateTo: document.getElementById('filter-date-to'),
     tblArticlesBody: document.getElementById('tbl-articles-body'),
     lblArticlesCount: document.getElementById('lbl-articles-count'),
     lblPaginationInfo: document.getElementById('lbl-pagination-info'),
     btnPagePrev: document.getElementById('btn-page-prev'),
     btnPageNext: document.getElementById('btn-page-next'),
+    btnCleanAllArticles: document.getElementById('btn-clean-all-articles'),
+    btnDeleteBySource: document.getElementById('btn-delete-by-source'),
+    btnDeleteByDate: document.getElementById('btn-delete-by-date'),
+
+    // Confirm Delete Modal
+    modalConfirmDelete: document.getElementById('modal-confirm-delete'),
+    confirmDeleteTitle: document.getElementById('confirm-delete-title'),
+    confirmDeleteMessage: document.getElementById('confirm-delete-message'),
+    confirmDeleteInput: document.getElementById('confirm-delete-input'),
+    btnConfirmDeleteExecute: document.getElementById('btn-confirm-delete-execute'),
 
     // Forms & Settings
     formConfigWp: document.getElementById('form-config-wp'),
@@ -77,6 +91,11 @@ document.addEventListener('DOMContentLoaded', () => {
     inpAiDryrun: document.getElementById('inp-ai-dryrun'),
     inpAiPrompt: document.getElementById('inp-ai-prompt'),
     btnTestAi: document.getElementById('btn-test-ai'),
+
+    formConfigN8n: document.getElementById('form-config-n8n'),
+    inpN8nEnabled: document.getElementById('inp-n8n-enabled'),
+    inpN8nSelectorsUrl: document.getElementById('inp-n8n-selectors-url'),
+    inpN8nRewriteUrl: document.getElementById('inp-n8n-rewrite-url'),
 
     formConfigGeneral: document.getElementById('form-config-general'),
     inpGenDb: document.getElementById('inp-gen-db'),
@@ -129,7 +148,35 @@ document.addEventListener('DOMContentLoaded', () => {
     inpSrcEnabled: document.getElementById('inp-src-enabled'),
     btnAutoDetect: document.getElementById('btn-auto-detect'),
 
-    toastContainer: document.getElementById('toast-container')
+    toastContainer: document.getElementById('toast-container'),
+
+    // Test All modal
+    modalTestAll: document.getElementById('modal-test-all'),
+    btnTestAllSources: document.getElementById('btn-test-all-sources'),
+    btnStartTestAll: document.getElementById('btn-start-test-all'),
+    testAllResultsList: document.getElementById('test-all-results-list'),
+    testAllSummaryBar: document.getElementById('test-all-summary-bar'),
+    testAllProgress: document.getElementById('test-all-progress'),
+    testAllProgressFill: document.getElementById('test-all-progress-fill'),
+    taCountSuccess: document.getElementById('ta-count-success'),
+    taCountWarn: document.getElementById('ta-count-warn'),
+    taCountFail: document.getElementById('ta-count-fail'),
+    taCountPending: document.getElementById('ta-count-pending'),
+
+    // Bulk Import modal
+    modalBulkImport: document.getElementById('modal-bulk-import'),
+    btnBulkImportModal: document.getElementById('btn-bulk-import-modal'),
+    btnBulkParse: document.getElementById('btn-bulk-parse'),
+    btnBulkDetectAll: document.getElementById('btn-bulk-detect-all'),
+    btnBulkBack: document.getElementById('btn-bulk-back'),
+    btnBulkImportExecute: document.getElementById('btn-bulk-import-execute'),
+    bulkUrlsTextarea: document.getElementById('bulk-urls-textarea'),
+    bulkUrlParseCount: document.getElementById('bulk-url-parse-count'),
+    bulkStepPaste: document.getElementById('bulk-step-paste'),
+    bulkStepPreview: document.getElementById('bulk-step-preview'),
+    bulkPreviewLabel: document.getElementById('bulk-preview-label'),
+    bulkPreviewTbody: document.getElementById('bulk-preview-tbody'),
+    bulkCheckAll: document.getElementById('bulk-check-all'),
   };
 
   // =========================================================================
@@ -395,6 +442,24 @@ document.addEventListener('DOMContentLoaded', () => {
       DOM.lblAiStatus.textContent = 'إعادة الصياغة بالذكاء الاصطناعي معطلة.';
       DOM.dotAiStatus.className = 'status-dot warning';
     }
+
+    // Check n8n connection status
+    const n8n = state.config.n8n;
+    if (n8n && n8n.enabled) {
+      if (n8n.selectorsWebhookUrl && n8n.rewriteWebhookUrl) {
+        DOM.lblN8nStatus.textContent = 'خادم الأتمتة n8n مفعّل وجاهز للربط!';
+        DOM.dotN8nStatus.className = 'status-dot online';
+      } else if (n8n.selectorsWebhookUrl || n8n.rewriteWebhookUrl) {
+        DOM.lblN8nStatus.textContent = 'تكامل n8n غير مكتمل (أحد الروابط فارغ).';
+        DOM.dotN8nStatus.className = 'status-dot warning';
+      } else {
+        DOM.lblN8nStatus.textContent = 'أتمتة n8n مفعّلة ولكن تفتقد روابط الويب هوك.';
+        DOM.dotN8nStatus.className = 'status-dot offline';
+      }
+    } else {
+      DOM.lblN8nStatus.textContent = 'أتمتة وتكامل n8n معطّلة حالياً.';
+      DOM.dotN8nStatus.className = 'status-dot warning';
+    }
   }
 
   // Connection checking triggers
@@ -483,6 +548,12 @@ document.addEventListener('DOMContentLoaded', () => {
       DOM.inpAiModel.value = ai.model || 'gpt-4o-mini';
       DOM.inpAiDryrun.value = ai.isDryRun !== undefined ? ai.isDryRun.toString() : 'true';
       DOM.inpAiPrompt.value = ai.systemPrompt || '';
+
+      // n8n Settings Form Populate
+      const n8n = state.config.n8n || {};
+      DOM.inpN8nEnabled.checked = n8n.enabled || false;
+      DOM.inpN8nSelectorsUrl.value = n8n.selectorsWebhookUrl || '';
+      DOM.inpN8nRewriteUrl.value = n8n.rewriteWebhookUrl || '';
 
       // General Settings Form Populate
       const gen = state.config.general || {};
@@ -606,6 +677,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Handle n8n Form Submission
+  if (DOM.formConfigN8n) {
+    DOM.formConfigN8n.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const n8n = {
+        enabled: DOM.inpN8nEnabled.checked,
+        selectorsWebhookUrl: DOM.inpN8nSelectorsUrl.value.trim(),
+        rewriteWebhookUrl: DOM.inpN8nRewriteUrl.value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ n8n })
+        });
+        const result = await res.json();
+        if (result.success) {
+          showToast('تم حفظ وتحديث إعدادات ربط n8n بنجاح!', 'success');
+          state.config.n8n = n8n;
+          checkConnectionProbes();
+        } else {
+          showToast(result.error, 'error');
+        }
+      } catch (err) {
+        showToast(`فشل الاتصال البرمجي بالخادم: ${err.message}`, 'error');
+      }
+    });
+  }
+
   // =========================================================================
   // 6. NEWS SOURCES TAB CONTROLLER
   // =========================================================================
@@ -648,18 +749,29 @@ document.addEventListener('DOMContentLoaded', () => {
       let lastTestedHtml = '';
       if (src.lastTestedAt) {
         const timeStr = formatRelativeTime(src.lastTestedAt);
+        const failCount = src.consecutiveFailures || 0;
         if (src.lastTestStatus === 'success') {
           lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px;"><span class="status-dot online" title="فحص ناجح"></span> <span class="font-tajawal text-xs text-white">${timeStr}</span></div>`;
         } else {
-          lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px;"><span class="status-dot offline" title="فشل الفحص: ${escapeHtml(src.lastTestError || '')}"></span> <span class="font-tajawal text-xs text-danger" title="فشل الفحص: ${escapeHtml(src.lastTestError || '')}">${timeStr} (فشل)</span></div>`;
+          const failBadge = failCount >= 3 
+            ? `<span class="badge-fail-count" title="يتم تخطي هذا المصدر تلقائياً في الجلب الرئيسي">${failCount} فشل متكرر ⛔</span>` 
+            : failCount > 0 
+            ? `<span class="badge-fail-count minor" title="عدد مرات الفشل المتتالية">${failCount} فشل</span>` 
+            : '';
+          lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;"><span class="status-dot offline" title="فشل الفحص: ${escapeHtml(src.lastTestError || '')}"></span> <span class="font-tajawal text-xs text-danger" title="فشل الفحص: ${escapeHtml(src.lastTestError || '')}">${timeStr} (فشل)</span>${failBadge}</div>`;
         }
       } else {
         lastTestedHtml = `<div style="display: flex; align-items: center; gap: 6px;"><span class="status-dot warning" title="غير مفحوص"></span> <span class="text-muted text-xs">غير مفحوص</span></div>`;
       }
 
+      // Show a row-level broken warning for sources with 3+ consecutive failures
+      const isBroken = (src.consecutiveFailures || 0) >= 3;
+      const rowClass = isBroken ? 'source-row-broken' : '';
+
       const tr = document.createElement('tr');
+      tr.className = rowClass;
       tr.innerHTML = `
-        <td><strong>${escapeHtml(src.name)}</strong></td>
+        <td><strong>${escapeHtml(src.name)}</strong>${isBroken ? ' <span class="badge-broken-label">متوقف تلقائياً</span>' : ''}</td>
         <td><a href="${src.url}" target="_blank" class="table-link">${escapeHtml(src.url)} <i class="fa-solid fa-up-right-from-square"></i></a></td>
         <td>${src.rssUrl ? `<a href="${src.rssUrl}" target="_blank" class="table-link">${escapeHtml(src.rssUrl)}</a>` : '<span class="text-muted">غير متوفر</span>'}</td>
         <td>${strategyMap[src.strategy] || src.strategy}</td>
@@ -673,7 +785,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           <div class="btn-group">
             <button class="btn btn-outline-purple btn-sm btn-test-src" data-index="${idx}" title="فحص الجلب"><i class="fa-solid fa-vial"></i></button>
+            <button class="btn btn-outline-primary btn-sm btn-redetect-src" data-index="${idx}" title="إعادة كشف الاستراتيجية"><i class="fa-solid fa-magnifying-glass-chart"></i></button>
             <button class="btn btn-outline-primary btn-sm btn-edit-src" data-index="${idx}" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
+            ${isBroken ? `<button class="btn btn-outline-warning btn-sm btn-reset-failures" data-index="${idx}" title="إعادة تفعيل المصدر وإعادة ضبط عداد الأخطاء"><i class="fa-solid fa-arrow-rotate-left"></i></button>` : ''}
             <button class="btn btn-outline-danger btn-sm btn-delete-src" data-index="${idx}" title="حذف"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>
@@ -743,6 +857,31 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+    // Bind Reset Failures (restore broken source) buttons
+    document.querySelectorAll('.btn-reset-failures').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const index = btn.getAttribute('data-index');
+        const sourceName = state.config.sources[index].name;
+        try {
+          const res = await fetch(`/api/sources/${index}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ consecutiveFailures: 0 })
+          });
+          const result = await res.json();
+          if (result.success) {
+            state.config.sources[index].consecutiveFailures = 0;
+            showToast(`تمت إعادة ضبط عداد الأخطاء للمصدر "${sourceName}" — سيشارك مجدداً في الجلب الرئيسي.`, 'success');
+            loadSourcesTable();
+          } else {
+            showToast(result.error || 'فشل إعادة الضبط.', 'error');
+          }
+        } catch (err) {
+          showToast(`عطل في الاتصال: ${err.message}`, 'error');
+        }
+      });
+    });
+
     // Bind Edit buttons
     document.querySelectorAll('.btn-edit-src').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -756,6 +895,57 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', () => {
         const index = btn.getAttribute('data-index');
         triggerTestScrape(index);
+      });
+    });
+
+    // Bind Re-detect Strategy buttons
+    document.querySelectorAll('.btn-redetect-src').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const index = parseInt(btn.getAttribute('data-index'));
+        const source = state.config.sources[index];
+        if (!source) return;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        
+        try {
+          const response = await fetch('/api/sources/auto-detect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: source.url })
+          });
+          const result = await response.json();
+          
+          if (result.success && result.result && result.result.success) {
+            const detected = result.result;
+            // Update source with detected strategy
+            const updates = {
+              strategy: detected.strategy,
+              selectors: detected.selectors
+            };
+            if (detected.rssUrl) updates.rssUrl = detected.rssUrl;
+            
+            const updateRes = await fetch(`/api/sources/${index}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updates)
+            });
+            const updateResult = await updateRes.json();
+            if (updateResult.success) {
+              state.config.sources[index] = { ...state.config.sources[index], ...updates };
+              loadSourcesTable();
+              const strategyLabel = { wp_api: 'WP-JSON API', rss: 'RSS Feed', html: 'HTML Crawl' }[detected.strategy] || detected.strategy;
+              showToast(`✓ ${source.name}: تم الكشف عن استراتيجية ${strategyLabel}`, 'success');
+            }
+          } else {
+            showToast(`${source.name}: ${result.result?.error || 'فشل الكشف التلقائي'}`, 'error');
+          }
+        } catch (err) {
+          showToast(`خطأ: ${err.message}`, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i>';
+        }
       });
     });
   }
@@ -796,6 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update client-side status state
         state.config.sources[index].lastTestedAt = result.lastTestedAt || new Date().toISOString();
         state.config.sources[index].lastTestStatus = 'success';
+        state.config.sources[index].consecutiveFailures = 0;
         delete state.config.sources[index].lastTestError;
         loadSourcesTable();
 
@@ -803,7 +994,10 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.testArticlesContainer.innerHTML = '';
         
         if (result.articles.length === 0) {
-          DOM.testArticlesContainer.innerHTML = '<p class="text-center py-4 text-muted">لم يتم العثور على أي مقالات إطلاقاً في هذا الفحص التجريبي.</p>';
+          const emptyMsg = result.warning
+            ? `<div class="alert-warning-inline"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(result.warning)}</div>`
+            : '<p class="text-center py-4 text-muted">لم يتم العثور على أي مقالات إطلاقاً في هذا الفحص التجريبي.</p>';
+          DOM.testArticlesContainer.innerHTML = emptyMsg;
         } else {
           result.articles.forEach(art => {
             let formattedDate = 'غير متوفر';
@@ -840,9 +1034,12 @@ document.addEventListener('DOMContentLoaded', () => {
         state.config.sources[index].lastTestedAt = result.lastTestedAt || new Date().toISOString();
         state.config.sources[index].lastTestStatus = 'failed';
         state.config.sources[index].lastTestError = result.lastTestError || result.error;
+        state.config.sources[index].consecutiveFailures = result.consecutiveFailures || 0;
         loadSourcesTable();
 
-        DOM.testErrorMessage.textContent = result.error || 'حدث خطأ غير متوقع أثناء الجلب.';
+        const failMsg = result.error || 'حدث خطأ غير متوقع أثناء الجلب.';
+        const failCount = result.consecutiveFailures || 0;
+        DOM.testErrorMessage.innerHTML = `${escapeHtml(failMsg)}${failCount >= 3 ? '<br><strong style="color:#fbbf24">⚠️ هذا المصدر تجاوز ٣ أخطاء متتالية — سيتم تخطيه تلقائياً في الجلب الرئيسي. اضغط زر الاسترداد لإعادة تفعيله.</strong>' : failCount > 0 ? `<br><small style="opacity:.7">عدد الأخطاء المتتالية: ${failCount}/3</small>` : ''}`;
         DOM.testScrapeError.classList.remove('d-none');
       }
     } catch (error) {
@@ -976,8 +1173,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const source = DOM.filterArticleSource.value;
     const status = DOM.filterArticleStatus.value;
     const page = state.pagination.page;
+    const dateFrom = DOM.filterDateFrom ? DOM.filterDateFrom.value : '';
+    const dateTo = DOM.filterDateTo ? DOM.filterDateTo.value : '';
 
-    const url = `/api/articles?search=${encodeURIComponent(search)}&source=${encodeURIComponent(source)}&status=${encodeURIComponent(status)}&page=${page}&limit=15`;
+    let url = `/api/articles?search=${encodeURIComponent(search)}&source=${encodeURIComponent(source)}&status=${encodeURIComponent(status)}&page=${page}&limit=15`;
+    if (dateFrom) url += `&dateFrom=${dateFrom}T00:00:00Z`;
+    if (dateTo) url += `&dateTo=${dateTo}T23:59:59Z`;
     
     try {
       const response = await fetch(url);
@@ -1029,15 +1230,20 @@ document.addEventListener('DOMContentLoaded', () => {
           ? `<span class="badge badge-info font-monospace">${article.wordpress_post_id}</span>`
           : '<span class="text-muted">-</span>';
 
+        const truncatedTitle = article.title.length > 120 ? article.title.slice(0, 120) + '...' : article.title;
+
         tr.innerHTML = `
-          <td class="article-title-cell" title="${escapeHtml(article.title)}"><strong>${escapeHtml(article.title)}</strong></td>
+          <td class="article-title-cell" title="${escapeHtml(article.title)}"><strong>${escapeHtml(truncatedTitle)}</strong></td>
           <td><span class="badge badge-secondary">${escapeHtml(article.source_name)}</span></td>
           <td><a href="${article.url}" target="_blank" class="table-link" title="زيارة رابط الخبر الأصلي"><i class="fa-solid fa-square-share-nodes"></i> زيارة</a></td>
           <td class="font-tajawal text-xs">${formattedDate}</td>
           <td>${wpIdDisplay}</td>
           <td>${statusBadge}</td>
           <td>
-            <button class="btn btn-outline-primary btn-xs btn-view-article" data-id="${article.id}"><i class="fa-solid fa-eye"></i> التفاصيل</button>
+            <div class="btn-group" style="display: flex; gap: 4px;">
+              <button class="btn btn-outline-primary btn-xs btn-view-article" data-id="${article.id}"><i class="fa-solid fa-eye"></i> التفاصيل</button>
+              <button class="btn btn-outline-danger btn-xs btn-delete-article" data-id="${article.id}"><i class="fa-solid fa-trash-can"></i> حذف</button>
+            </div>
           </td>
         `;
         DOM.tblArticlesBody.appendChild(tr);
@@ -1054,6 +1260,47 @@ document.addEventListener('DOMContentLoaded', () => {
           const id = parseInt(btn.getAttribute('data-id'));
           const article = state.articles.find(a => a.id === id);
           if (article) showArticleModal(article);
+        });
+      });
+
+      // Bind delete handlers
+      document.querySelectorAll('.btn-delete-article').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = parseInt(btn.getAttribute('data-id'));
+          const article = state.articles.find(a => a.id === id);
+          if (!article) return;
+
+          let deleteFromWP = false;
+          const isPublished = article.wordpress_post_id;
+
+          let confirmMsg = `هل أنت متأكد تماماً من حذف مقال "${article.title.slice(0, 50)}..." من السجل المحلي؟`;
+          
+          if (isPublished) {
+            confirmMsg = `تنبيه: هذا المقال تم نشره في ووردبريس (Post ID: ${article.wordpress_post_id}).\n\n` +
+                         `هل تريد حذف المقال من قاعدة البيانات المحلية؟`;
+          }
+
+          if (confirm(confirmMsg)) {
+            if (isPublished) {
+              deleteFromWP = confirm(`هل ترغب أيضاً في حذف وتدمير المقال من موقع ووردبريس (WordPress) الفعلي؟\n\nاضغط "موافق" للحذف من ووردبريس والمحلي معاً، أو "إلغاء" للحذف من الأرشيف المحلي فقط.`);
+            }
+
+            try {
+              const res = await fetch(`/api/articles/${id}?deleteFromWP=${deleteFromWP}`, {
+                method: 'DELETE'
+              });
+              const result = await res.json();
+              if (result.success) {
+                showToast(result.message || 'تم حذف المقال بنجاح!', 'success');
+                loadArticlesTable(); // Refresh table
+                loadStats(); // Update counters
+              } else {
+                showToast(result.error || 'فشل حذف المقال', 'error');
+              }
+            } catch (err) {
+              showToast(`عطل بروتوكول الشبكة: ${err.message}`, 'error');
+            }
+          }
         });
       });
 
@@ -1083,6 +1330,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadArticlesTable();
   });
 
+  // Date filter listeners
+  if (DOM.filterDateFrom) {
+    DOM.filterDateFrom.addEventListener('change', () => {
+      state.pagination.page = 1;
+      loadArticlesTable();
+    });
+  }
+  if (DOM.filterDateTo) {
+    DOM.filterDateTo.addEventListener('change', () => {
+      state.pagination.page = 1;
+      loadArticlesTable();
+    });
+  }
+
   DOM.btnPagePrev.addEventListener('click', () => {
     if (state.pagination.page > 1) {
       state.pagination.page--;
@@ -1096,6 +1357,116 @@ document.addEventListener('DOMContentLoaded', () => {
       loadArticlesTable();
     }
   });
+
+  // =========================================================================
+  // 7b. ARTICLE MANAGEMENT — Clean / Delete actions
+  // =========================================================================
+  let pendingDeleteAction = null;
+
+  function openConfirmModal(title, message, action) {
+    pendingDeleteAction = action;
+    DOM.confirmDeleteTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${title}`;
+    DOM.confirmDeleteMessage.textContent = message;
+    DOM.confirmDeleteInput.value = '';
+    DOM.btnConfirmDeleteExecute.disabled = true;
+    DOM.modalConfirmDelete.classList.add('active');
+    DOM.confirmDeleteInput.focus();
+  }
+
+  if (DOM.confirmDeleteInput) {
+    DOM.confirmDeleteInput.addEventListener('input', () => {
+      const val = DOM.confirmDeleteInput.value.trim();
+      DOM.btnConfirmDeleteExecute.disabled = (val !== 'حذف');
+    });
+  }
+
+  if (DOM.btnConfirmDeleteExecute) {
+    DOM.btnConfirmDeleteExecute.addEventListener('click', async () => {
+      if (!pendingDeleteAction) return;
+      DOM.btnConfirmDeleteExecute.disabled = true;
+      DOM.btnConfirmDeleteExecute.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحذف...';
+      try {
+        await pendingDeleteAction();
+        DOM.modalConfirmDelete.classList.remove('active');
+        state.pagination.page = 1;
+        loadArticlesTable();
+        loadDashboardStats();
+      } catch (err) {
+        showToast(`خطأ: ${err.message}`, 'error');
+      } finally {
+        DOM.btnConfirmDeleteExecute.innerHTML = '<i class="fa-solid fa-trash"></i> تنفيذ الحذف';
+        pendingDeleteAction = null;
+      }
+    });
+  }
+
+  // Clean ALL articles
+  if (DOM.btnCleanAllArticles) {
+    DOM.btnCleanAllArticles.addEventListener('click', () => {
+      const total = state.pagination.total || 0;
+      openConfirmModal(
+        'حذف جميع المقالات',
+        `سيتم حذف ${total.toLocaleString('ar-EG')} مقال من قاعدة البيانات بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.`,
+        async () => {
+          const res = await fetch('/api/articles/clean', { method: 'DELETE' });
+          const result = await res.json();
+          if (!result.success) throw new Error(result.error);
+          showToast(result.message, 'success');
+        }
+      );
+    });
+  }
+
+  // Delete by source
+  if (DOM.btnDeleteBySource) {
+    DOM.btnDeleteBySource.addEventListener('click', () => {
+      const source = DOM.filterArticleSource.value;
+      if (!source) {
+        showToast('اختر مصدراً من القائمة المنسدلة أولاً ثم اضغط حذف حسب المصدر.', 'warning');
+        return;
+      }
+      openConfirmModal(
+        `حذف مقالات: ${source}`,
+        `سيتم حذف جميع المقالات من المصدر "${source}" بشكل نهائي.`,
+        async () => {
+          const res = await fetch('/api/articles/by-source', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourceName: source })
+          });
+          const result = await res.json();
+          if (!result.success) throw new Error(result.error);
+          showToast(result.message, 'success');
+        }
+      );
+    });
+  }
+
+  // Delete by date range
+  if (DOM.btnDeleteByDate) {
+    DOM.btnDeleteByDate.addEventListener('click', () => {
+      const dateFrom = DOM.filterDateFrom ? DOM.filterDateFrom.value : '';
+      const dateTo = DOM.filterDateTo ? DOM.filterDateTo.value : '';
+      if (!dateFrom || !dateTo) {
+        showToast('حدد نطاق التاريخ (من - إلى) أولاً ثم اضغط حذف حسب التاريخ.', 'warning');
+        return;
+      }
+      openConfirmModal(
+        'حذف مقالات حسب التاريخ',
+        `سيتم حذف جميع المقالات من ${dateFrom} إلى ${dateTo} بشكل نهائي.`,
+        async () => {
+          const res = await fetch('/api/articles/by-date', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ startDate: `${dateFrom}T00:00:00Z`, endDate: `${dateTo}T23:59:59Z` })
+          });
+          const result = await res.json();
+          if (!result.success) throw new Error(result.error);
+          showToast(result.message, 'success');
+        }
+      );
+    });
+  }
 
   // Modal Viewer
   function showArticleModal(article) {
@@ -1139,9 +1510,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Launch SSE event stream
     let url = '/api/run-stream';
+    const params = new URLSearchParams();
+    
     if (DOM.selectTerminalSource && DOM.selectTerminalSource.value !== '') {
-      url += `?sourceIndex=${DOM.selectTerminalSource.value}`;
+      params.append('sourceIndex', DOM.selectTerminalSource.value);
     }
+    
+    const dateInput = document.getElementById('inp-terminal-date');
+    if (dateInput && dateInput.value) {
+      params.append('sinceDate', dateInput.value);
+    }
+    
+    const queryString = params.toString();
+    if (queryString) {
+      url += '?' + queryString;
+    }
+    
     state.eventSource = new EventSource(url);
 
     state.eventSource.onmessage = (event) => {
@@ -1283,7 +1667,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await res.json();
 
         if (result.success) {
-          showToast(`تم التعرف على إعدادات الموقع تلقائياً بنجاح!`, 'success');
+          // Build a detailed toast message based on validation
+          const vr = result.validationResult;
+          const strategyNames = { wp_api: 'WordPress API', rss: 'RSS Feed', html: 'HTML Crawl' };
+          let toastMsg = `✓ تم الكشف: ${strategyNames[result.strategy] || result.strategy}`;
+          
+          if (vr && vr.articlesFound > 0) {
+            toastMsg += ` — تم التحقق بنجاح (${vr.articlesFound} مقال مطابق)`;
+            showToast(toastMsg, 'success');
+          } else if (vr && vr.note) {
+            toastMsg += ` — ⚠️ ${vr.note}`;
+            showToast(toastMsg, 'warning');
+          } else if (result.strategy === 'wp_api' || result.strategy === 'rss') {
+            showToast(toastMsg + ' — تم التحقق بنجاح', 'success');
+          } else {
+            showToast(toastMsg, 'info');
+          }
           
           // Populate fields
           if (result.name) DOM.inpSrcName.value = result.name;
@@ -1314,7 +1713,365 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // 10. INITIALIZATION
+  // 10. TEST ALL SOURCES
+  // =========================================================================
+
+  let testAllRunning = false;
+
+  if (DOM.btnTestAllSources) {
+    DOM.btnTestAllSources.addEventListener('click', () => {
+      DOM.modalTestAll.classList.add('active');
+      // Reset UI
+      DOM.testAllResultsList.innerHTML = '';
+      DOM.testAllSummaryBar.classList.add('d-none');
+      DOM.testAllProgress.classList.add('d-none');
+      DOM.btnStartTestAll.disabled = false;
+      DOM.btnStartTestAll.innerHTML = '<i class="fa-solid fa-play"></i> بدء الفحص الشامل';
+    });
+  }
+
+  if (DOM.btnStartTestAll) {
+    DOM.btnStartTestAll.addEventListener('click', async () => {
+      if (testAllRunning) return;
+      testAllRunning = true;
+
+      const sources = state.config.sources || [];
+      if (sources.length === 0) {
+        showToast('لا توجد مصادر لفحصها.', 'warning');
+        testAllRunning = false;
+        return;
+      }
+
+      // Setup UI
+      DOM.btnStartTestAll.disabled = true;
+      DOM.btnStartTestAll.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...';
+      DOM.testAllSummaryBar.classList.remove('d-none');
+      DOM.testAllProgress.classList.remove('d-none');
+      DOM.testAllResultsList.innerHTML = '';
+
+      let countSuccess = 0, countWarn = 0, countFail = 0, countPending = sources.length;
+
+      const updateSummary = () => {
+        DOM.taCountSuccess.textContent = countSuccess;
+        DOM.taCountWarn.textContent = countWarn;
+        DOM.taCountFail.textContent = countFail;
+        DOM.taCountPending.textContent = countPending;
+        const done = sources.length - countPending;
+        DOM.testAllProgressFill.style.width = `${Math.round((done / sources.length) * 100)}%`;
+      };
+
+      updateSummary();
+
+      // Build placeholder rows
+      const rowEls = sources.map((src, idx) => {
+        const row = document.createElement('div');
+        row.id = `ta-row-${idx}`;
+        row.className = 'ta-row ta-pending';
+        row.innerHTML = `
+          <span class="ta-status-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+          <span class="ta-name font-tajawal">${escapeHtml(src.name)}</span>
+          <span class="ta-strategy-badge">${src.strategy}</span>
+          <span class="ta-result-text text-muted">معلّق...</span>
+        `;
+        DOM.testAllResultsList.appendChild(row);
+        return row;
+      });
+
+      // Run tests sequentially
+      for (let idx = 0; idx < sources.length; idx++) {
+        const row = rowEls[idx];
+        row.className = 'ta-row ta-running';
+        row.querySelector('.ta-status-icon').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        row.querySelector('.ta-result-text').textContent = 'جاري الفحص...';
+        row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        try {
+          const res = await fetch(`/api/sources/${idx}/test`, { method: 'POST' });
+          const result = await res.json();
+
+          if (!res.ok || !result.success) {
+            // Hard failure
+            countFail++;
+            countPending--;
+            row.className = 'ta-row ta-fail';
+            row.querySelector('.ta-status-icon').innerHTML = '<i class="fa-solid fa-circle-xmark text-danger"></i>';
+            row.querySelector('.ta-result-text').innerHTML = `<span class="text-danger">${escapeHtml(result.error || 'فشل الجلب')}</span>`;
+            // Update state
+            if (state.config.sources[idx]) {
+              state.config.sources[idx].lastTestStatus = 'failed';
+              state.config.sources[idx].consecutiveFailures = result.consecutiveFailures || 0;
+            }
+          } else if (!result.hasArticles || result.articlesCount === 0) {
+            // Connected but empty — warning
+            countWarn++;
+            countPending--;
+            row.className = 'ta-row ta-warn';
+            row.querySelector('.ta-status-icon').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-warning"></i>';
+            row.querySelector('.ta-result-text').innerHTML = `<span class="text-warning">مصدر متصل، صفر مقالات — تحقق من المحددات</span>`;
+            if (state.config.sources[idx]) {
+              state.config.sources[idx].lastTestStatus = 'success';
+              state.config.sources[idx].consecutiveFailures = 0;
+            }
+          } else {
+            // Full success
+            countSuccess++;
+            countPending--;
+            row.className = 'ta-row ta-success';
+            row.querySelector('.ta-status-icon').innerHTML = '<i class="fa-solid fa-circle-check text-success"></i>';
+            row.querySelector('.ta-result-text').innerHTML = `<span class="text-success">${result.articlesCount} مقال تم جلبه بنجاح</span>`;
+            if (state.config.sources[idx]) {
+              state.config.sources[idx].lastTestStatus = 'success';
+              state.config.sources[idx].consecutiveFailures = 0;
+            }
+          }
+        } catch (err) {
+          countFail++;
+          countPending--;
+          row.className = 'ta-row ta-fail';
+          row.querySelector('.ta-status-icon').innerHTML = '<i class="fa-solid fa-circle-xmark text-danger"></i>';
+          row.querySelector('.ta-result-text').innerHTML = `<span class="text-danger">عطل: ${escapeHtml(err.message)}</span>`;
+        }
+
+        updateSummary();
+        // Small inter-request delay to avoid hammering sources
+        await new Promise(r => setTimeout(r, 600));
+      }
+
+      // Done
+      testAllRunning = false;
+      DOM.btnStartTestAll.disabled = false;
+      DOM.btnStartTestAll.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة الفحص';
+      loadSourcesTable(); // Refresh the table with updated statuses
+    });
+  }
+
+  // =========================================================================
+  // 11. BULK IMPORT
+  // =========================================================================
+
+  // Bulk import state
+  let bulkParsedUrls = []; // { url, isDuplicate }
+  const bulkDetectionState = {}; // url -> { name, strategy, rssUrl, selectors, status }
+
+  // Open Bulk Import modal
+  if (DOM.btnBulkImportModal) {
+    DOM.btnBulkImportModal.addEventListener('click', () => {
+      // Reset
+      DOM.bulkUrlsTextarea.value = '';
+      DOM.bulkUrlParseCount.textContent = '';
+      DOM.bulkStepPaste.classList.remove('d-none');
+      DOM.bulkStepPreview.classList.add('d-none');
+      DOM.btnBulkImportExecute.classList.add('d-none');
+      DOM.bulkPreviewTbody.innerHTML = '';
+      bulkParsedUrls = [];
+      Object.keys(bulkDetectionState).forEach(k => delete bulkDetectionState[k]);
+      DOM.modalBulkImport.classList.add('active');
+    });
+  }
+
+  // Parse and clean URLs from raw textarea input
+  function parseBulkUrls(rawText) {
+    // Split on whitespace, commas, semicolons, newlines
+    const tokens = rawText.split(/[\s,;|]+/).map(t => t.trim()).filter(Boolean);
+    const urlRegex = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[^\s]*)?$/i;
+    const seen = new Set();
+    const existingUrls = new Set((state.config.sources || []).map(s => normalizeUrl(s.url)));
+    const result = [];
+    for (const token of tokens) {
+      // Basic URL heuristic
+      if (!urlRegex.test(token)) continue;
+      let url = token;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+      // Remove trailing slash for dedup
+      const normalized = normalizeUrl(url);
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      result.push({ url, isDuplicate: existingUrls.has(normalized) });
+    }
+    return result;
+  }
+
+  function normalizeUrl(url) {
+    try {
+      const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+      return u.hostname.replace(/^www\./, '') + u.pathname.replace(/\/$/, '');
+    } catch { return url.toLowerCase().replace(/^www\./, '').replace(/\/$/, ''); }
+  }
+
+  const strategyBadgeMap = {
+    wp_api: '<span class="badge badge-success"><i class="fa-solid fa-code"></i> WP API</span>',
+    rss: '<span class="badge badge-purple"><i class="fa-solid fa-rss"></i> RSS</span>',
+    html: '<span class="badge badge-warning"><i class="fa-solid fa-spider"></i> HTML</span>',
+    detecting: '<span class="badge badge-info"><i class="fa-solid fa-spinner fa-spin"></i> كشف...</span>',
+    failed: '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> فشل</span>',
+    unknown: '<span class="badge" style="background:rgba(148,163,184,.2);color:#94a3b8;">غير معروف</span>'
+  };
+
+  function renderBulkRow(entry, rowIndex) {
+    const detection = bulkDetectionState[entry.url] || {};
+    const strategyKey = detection.status === 'detecting' ? 'detecting' : detection.status === 'failed' ? 'failed' : detection.strategy || 'unknown';
+    const duplicateWarning = entry.isDuplicate ? '<span class="badge-fail-count minor" title="يوجد مسبقاً في قائمة المصادر">تكرار</span>' : '';
+    return `
+      <tr id="bulk-row-${rowIndex}" ${entry.isDuplicate ? 'class="source-row-broken"' : ''}>
+        <td><input type="checkbox" class="bulk-row-check" data-index="${rowIndex}" ${entry.isDuplicate ? '' : 'checked'}></td>
+        <td style="font-size:12px;word-break:break-all;" dir="ltr">${escapeHtml(entry.url)} ${duplicateWarning}</td>
+        <td class="bulk-name-cell" style="font-size:12px;">${escapeHtml(detection.name || '—')}</td>
+        <td class="bulk-strategy-cell">${strategyBadgeMap[strategyKey] || strategyBadgeMap.unknown}</td>
+        <td class="bulk-status-cell" style="font-size:11px;">${detection.status === 'done' ? '<span class="text-success">✔ جاهز</span>' : detection.status === 'failed' ? '<span class="text-danger">✘ فشل</span>' : detection.status === 'detecting' ? '<span class="text-muted">...</span>' : '<span class="text-muted">لم يُفحص</span>'}</td>
+        <td><button class="btn btn-outline-purple btn-sm bulk-detect-one" data-index="${rowIndex}" title="كشف استراتيجية هذا الموقع" ${detection.status === 'detecting' ? 'disabled' : ''}><i class="fa-solid fa-magnifying-glass"></i></button></td>
+      </tr>
+    `;
+  }
+
+  function refreshBulkTable() {
+    DOM.bulkPreviewTbody.innerHTML = bulkParsedUrls.map((e, i) => renderBulkRow(e, i)).join('');
+    // Bind detect-one buttons
+    DOM.bulkPreviewTbody.querySelectorAll('.bulk-detect-one').forEach(btn => {
+      btn.addEventListener('click', () => detectOneUrl(parseInt(btn.getAttribute('data-index'))));
+    });
+    // Bind checkboxes for "check all"
+    DOM.bulkCheckAll.onchange = () => {
+      DOM.bulkPreviewTbody.querySelectorAll('.bulk-row-check').forEach(cb => { cb.checked = DOM.bulkCheckAll.checked; });
+    };
+  }
+
+  async function detectOneUrl(rowIndex) {
+    const entry = bulkParsedUrls[rowIndex];
+    if (!entry) return;
+    bulkDetectionState[entry.url] = { status: 'detecting' };
+    refreshBulkTable();
+    try {
+      const res = await fetch('/api/sources/auto-detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: entry.url })
+      });
+      const result = await res.json();
+      if (result.success) {
+        bulkDetectionState[entry.url] = {
+          status: 'done',
+          name: result.name,
+          strategy: result.strategy,
+          rssUrl: result.rssUrl,
+          selectors: result.selectors,
+          encoding: result.encoding || 'utf-8'
+        };
+      } else {
+        bulkDetectionState[entry.url] = { status: 'failed' };
+      }
+    } catch (e) {
+      bulkDetectionState[entry.url] = { status: 'failed' };
+    }
+    refreshBulkTable();
+  }
+
+  // Parse button
+  if (DOM.btnBulkParse) {
+    DOM.btnBulkParse.addEventListener('click', () => {
+      const raw = DOM.bulkUrlsTextarea.value;
+      bulkParsedUrls = parseBulkUrls(raw);
+      if (bulkParsedUrls.length === 0) {
+        showToast('لم يتم العثور على روابط صالحة في النص المُدخل.', 'warning');
+        return;
+      }
+      const dupeCount = bulkParsedUrls.filter(e => e.isDuplicate).length;
+      const newCount = bulkParsedUrls.length - dupeCount;
+      DOM.bulkPreviewLabel.textContent = `${bulkParsedUrls.length} رابط مُكتشف — ${newCount} جديد، ${dupeCount} تكرار`;
+      DOM.bulkStepPaste.classList.add('d-none');
+      DOM.bulkStepPreview.classList.remove('d-none');
+      DOM.btnBulkImportExecute.classList.remove('d-none');
+      refreshBulkTable();
+    });
+  }
+
+  // Back button
+  if (DOM.btnBulkBack) {
+    DOM.btnBulkBack.addEventListener('click', () => {
+      DOM.bulkStepPaste.classList.remove('d-none');
+      DOM.bulkStepPreview.classList.add('d-none');
+      DOM.btnBulkImportExecute.classList.add('d-none');
+    });
+  }
+
+  // Detect all button
+  if (DOM.btnBulkDetectAll) {
+    DOM.btnBulkDetectAll.addEventListener('click', async () => {
+      DOM.btnBulkDetectAll.disabled = true;
+      DOM.btnBulkDetectAll.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الكشف...';
+      for (let i = 0; i < bulkParsedUrls.length; i++) {
+        const entry = bulkParsedUrls[i];
+        if (bulkDetectionState[entry.url]?.status === 'done') continue; // Skip already detected
+        await detectOneUrl(i);
+        await new Promise(r => setTimeout(r, 300)); // Small delay
+      }
+      DOM.btnBulkDetectAll.disabled = false;
+      DOM.btnBulkDetectAll.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> كشف الاستراتيجية للكل';
+      showToast('اكتمل كشف الاستراتيجيات لجميع المواقع.', 'success');
+    });
+  }
+
+  // Import execute button
+  if (DOM.btnBulkImportExecute) {
+    DOM.btnBulkImportExecute.addEventListener('click', async () => {
+      const checkedBoxes = DOM.bulkPreviewTbody.querySelectorAll('.bulk-row-check:checked');
+      const selectedIndices = Array.from(checkedBoxes).map(cb => parseInt(cb.getAttribute('data-index')));
+      if (selectedIndices.length === 0) {
+        showToast('لم يتم تحديد أي مواقع للاستيراد.', 'warning');
+        return;
+      }
+
+      let importedCount = 0;
+      let failedCount = 0;
+
+      for (const idx of selectedIndices) {
+        const entry = bulkParsedUrls[idx];
+        if (entry.isDuplicate) continue; // Skip duplicates silently
+
+        const detection = bulkDetectionState[entry.url];
+        const newSource = {
+          name: detection?.name || new URL(entry.url.startsWith('http') ? entry.url : 'https://' + entry.url).hostname.replace('www.', ''),
+          url: entry.url,
+          rssUrl: detection?.rssUrl || null,
+          strategy: detection?.strategy || 'html',
+          enabled: true,
+          encoding: detection?.encoding || 'utf-8',
+          selectors: detection?.selectors || {
+            list: { container: 'article', title: 'h2 a', link: 'a' },
+            article: { title: 'h1', content: '.content', date: 'time' }
+          }
+        };
+
+        try {
+          const res = await fetch('/api/sources', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newSource)
+          });
+          const result = await res.json();
+          if (result.success) {
+            importedCount++;
+          } else {
+            failedCount++;
+          }
+        } catch (e) {
+          failedCount++;
+        }
+      }
+
+      if (importedCount > 0) {
+        showToast(`تم استيراد ${importedCount} موقع بنجاح${failedCount > 0 ? ` (${failedCount} فشل)` : ''}.`, importedCount > 0 ? 'success' : 'error');
+        DOM.modalBulkImport.classList.remove('active');
+        await loadGlobalConfig();
+        loadSourcesTable();
+        loadStats();
+      } else {
+        showToast(failedCount > 0 ? `فشل استيراد جميع المواقع المحددة.` : 'لا يوجد مواقع جديدة للاستيراد (جميعها موجودة مسبقاً).', 'warning');
+      }
+    });
+  }
+
+  // =========================================================================
+  // 12. INITIALIZATION
   // =========================================================================
   loadGlobalConfig();
   loadStats();

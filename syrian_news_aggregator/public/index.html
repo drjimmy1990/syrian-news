@@ -216,6 +216,17 @@
 
                   <div class="connection-item">
                     <div class="connection-icon">
+                      <i class="fa-solid fa-route"></i>
+                    </div>
+                    <div class="connection-details">
+                      <h4>خادم الأتمتة n8n Workflows</h4>
+                      <p id="lbl-n8n-status">جاري فحص الاتصال التلقائي...</p>
+                    </div>
+                    <span id="dot-n8n-status" class="status-dot warning"></span>
+                  </div>
+
+                  <div class="connection-item">
+                    <div class="connection-icon">
                       <i class="fa-solid fa-database"></i>
                     </div>
                     <div class="connection-details">
@@ -246,11 +257,19 @@
         <!-- TAB 2: NEWS SOURCES -->
         <section id="tab-sources" class="tab-panel">
           <div class="panel glass-card">
-            <div class="panel-header">
+        <div class="panel-header">
               <h2>إدارة مصادر الأخبار السورية</h2>
-              <button id="btn-add-source-modal" class="btn btn-success">
-                <i class="fa-solid fa-plus"></i> إضافة مصدر جديد
-              </button>
+              <div class="btn-group">
+                <button id="btn-test-all-sources" class="btn btn-outline-purple">
+                  <i class="fa-solid fa-flask-vial"></i> فحص الكل
+                </button>
+                <button id="btn-bulk-import-modal" class="btn btn-outline">
+                  <i class="fa-solid fa-file-import"></i> استيراد مجمّع
+                </button>
+                <button id="btn-add-source-modal" class="btn btn-success">
+                  <i class="fa-solid fa-plus"></i> إضافة مصدر جديد
+                </button>
+              </div>
             </div>
             <div class="panel-body">
               <div class="filter-bar">
@@ -312,6 +331,27 @@
                     <option value="processed">مؤرشف محلياً فقط</option>
                   </select>
                 </div>
+                <div class="form-group">
+                  <label for="filter-date-from">من تاريخ</label>
+                  <input type="date" id="filter-date-from" class="input-date">
+                </div>
+                <div class="form-group">
+                  <label for="filter-date-to">إلى تاريخ</label>
+                  <input type="date" id="filter-date-to" class="input-date">
+                </div>
+              </div>
+
+              <!-- Actions Row -->
+              <div class="articles-actions-row">
+                <button id="btn-clean-all-articles" class="btn btn-danger btn-sm" title="حذف جميع المقالات">
+                  <i class="fa-solid fa-trash-can"></i> حذف الكل
+                </button>
+                <button id="btn-delete-by-source" class="btn btn-warning btn-sm" title="حذف مقالات مصدر محدد">
+                  <i class="fa-solid fa-filter-circle-xmark"></i> حذف حسب المصدر
+                </button>
+                <button id="btn-delete-by-date" class="btn btn-warning btn-sm" title="حذف مقالات في نطاق زمني">
+                  <i class="fa-solid fa-calendar-xmark"></i> حذف حسب التاريخ
+                </button>
               </div>
 
               <!-- Articles Table -->
@@ -450,6 +490,38 @@
               </div>
             </div>
 
+            <!-- n8n Integration Config -->
+            <div class="panel glass-card">
+              <div class="panel-header">
+                <h2>إعدادات الربط وأتمتة العمليات (n8n Workflows)</h2>
+              </div>
+              <div class="panel-body">
+                <form id="form-config-n8n">
+                  <div class="form-group">
+                    <label class="switch-container">
+                      <input type="checkbox" id="inp-n8n-enabled">
+                      <span class="switch-slider"></span>
+                      <span class="switch-label">تفعيل الربط وأتمتة العمليات عبر خادم n8n</span>
+                    </label>
+                    <small class="d-block pt-1">عند التفعيل، سيقوم النظام بتوجيه طلبات استكشاف محددات المواقع والصياغة الذكية لتعمل عبر تدفقات العمل (Workflows) في n8n بدلاً من المعالجة المحلية.</small>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-n8n-selectors-url">رابط Webhook استكشاف محددات المواقع (AI Selector Discovery Webhook)</label>
+                    <input type="url" id="inp-n8n-selectors-url" placeholder="http://localhost:5678/webhook/... or https://your-n8n-instance.com/webhook/...">
+                    <small>الرابط الخاص بـ Webhook في تدفق عمل "🔍 AI Selector Discovery".</small>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-n8n-rewrite-url">رابط Webhook الصياغة والنشر التلقائي (AI Rewrite & Publish Webhook)</label>
+                    <input type="url" id="inp-n8n-rewrite-url" placeholder="http://localhost:5678/webhook/... or https://your-n8n-instance.com/webhook/...">
+                    <small>الرابط الخاص بـ Webhook لبدء صياغة ونشر المقالات تلقائياً.</small>
+                  </div>
+                  <div class="form-actions pt-2">
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات n8n</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
             <!-- General Config -->
             <div class="panel glass-card">
               <div class="panel-header">
@@ -493,6 +565,7 @@
                 <select id="select-terminal-source" style="background: rgba(20, 10, 35, 0.85); color: #e0d5f5; border: 1px solid rgba(138, 75, 245, 0.5); border-radius: 6px; padding: 6px 12px; font-family: 'Tajawal', sans-serif; font-size: 13px; outline: none; cursor: pointer; transition: all 0.3s ease; min-width: 180px; box-shadow: 0 0 10px rgba(138, 75, 245, 0.1);">
                   <option value="">كل المصادر المفعّلة</option>
                 </select>
+                <input type="date" id="inp-terminal-date" style="background: rgba(20, 10, 35, 0.85); color: #e0d5f5; border: 1px solid rgba(138, 75, 245, 0.5); border-radius: 6px; padding: 5px 10px; font-family: 'Tajawal', sans-serif; font-size: 13px; outline: none; cursor: pointer;" title="جلب المقالات المنشورة بعد هذا التاريخ فقط (اختياري)">
                 <button id="btn-terminal-clear" class="btn btn-outline btn-sm"><i class="fa-solid fa-eraser"></i> مسح سجل Terminal</button>
                 <button id="btn-terminal-run" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt"></i> بدء الدمج وجلب الأخبار الآن</button>
               </div>
@@ -762,6 +835,108 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline btn-close-modal">إغلاق النافذة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEST ALL SOURCES MODAL -->
+  <div id="modal-test-all" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <h2>فحص شامل لجميع المصادر</h2>
+        <button class="modal-close btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body custom-scroll font-tajawal">
+        <div id="test-all-summary-bar" class="test-all-summary d-none">
+          <span class="summary-stat"><i class="fa-solid fa-circle-check text-success"></i> <strong id="ta-count-success">0</strong> نجح</span>
+          <span class="summary-stat"><i class="fa-solid fa-triangle-exclamation text-warning"></i> <strong id="ta-count-warn">0</strong> تحذير</span>
+          <span class="summary-stat"><i class="fa-solid fa-circle-xmark text-danger"></i> <strong id="ta-count-fail">0</strong> فشل</span>
+          <span class="summary-stat text-muted"><i class="fa-solid fa-hourglass-half"></i> <strong id="ta-count-pending">0</strong> معلّق</span>
+        </div>
+        <div id="test-all-progress" class="test-all-progress-bar d-none">
+          <div id="test-all-progress-fill" class="progress-fill" style="width:0%"></div>
+        </div>
+        <div id="test-all-results-list" class="test-all-list">
+          <!-- Rows inserted by JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-start-test-all" class="btn btn-primary"><i class="fa-solid fa-play"></i> بدء الفحص الشامل</button>
+        <button class="btn btn-outline btn-close-modal">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BULK IMPORT MODAL -->
+  <div id="modal-bulk-import" class="modal-overlay">
+    <div class="modal-container large">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-file-import"></i> استيراد مجمّع للمواقع</h2>
+        <button class="modal-close btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body custom-scroll font-tajawal">
+        <!-- Step 1: Paste URLs -->
+        <div id="bulk-step-paste">
+          <p class="text-muted mb-2" style="font-size:13px;">الصق روابط المواقع بأي تنسيق — مسافات، فواصل، أسطر جديدة — وسيقوم النظام بتنظيفها واستخراج الروابط الصحيحة تلقائياً.</p>
+          <textarea id="bulk-urls-textarea" class="form-control bulk-textarea" placeholder="https://example.com&#10;https://another.com, https://third.com&#10;fourth.com fifth.com" rows="7" dir="ltr"></textarea>
+          <div class="mt-2 d-flex justify-content-between align-items-center">
+            <span id="bulk-url-parse-count" class="text-muted text-xs"></span>
+            <button id="btn-bulk-parse" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> تحليل وتنظيف الروابط</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Preview & detect strategies -->
+        <div id="bulk-step-preview" class="d-none">
+          <div class="bulk-preview-header">
+            <span id="bulk-preview-label" class="text-white font-tajawal"></span>
+            <div class="btn-group">
+              <button id="btn-bulk-detect-all" class="btn btn-outline-purple btn-sm"><i class="fa-solid fa-magnifying-glass-chart"></i> كشف الاستراتيجية للكل</button>
+              <button id="btn-bulk-back" class="btn btn-outline btn-sm"><i class="fa-solid fa-arrow-right"></i> رجوع</button>
+            </div>
+          </div>
+          <div class="table-container custom-scroll mt-2" style="max-height:340px;">
+            <table class="data-table" id="bulk-preview-table">
+              <thead>
+                <tr>
+                  <th style="width:32px;"><input type="checkbox" id="bulk-check-all" checked></th>
+                  <th>الرابط</th>
+                  <th>الاسم المكتشف</th>
+                  <th>الاستراتيجية</th>
+                  <th>الحالة</th>
+                  <th>كشف</th>
+                </tr>
+              </thead>
+              <tbody id="bulk-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-bulk-import-execute" class="btn btn-success d-none"><i class="fa-solid fa-file-import"></i> استيراد المحدد</button>
+        <button class="btn btn-outline btn-close-modal">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM DESTRUCTIVE ACTION MODAL -->
+  <div id="modal-confirm-delete" class="modal-overlay">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3 id="confirm-delete-title"><i class="fa-solid fa-triangle-exclamation"></i> تأكيد الحذف</h3>
+        <button class="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-delete-message" class="text-warning"></p>
+        <div class="form-group mt-2">
+          <label>اكتب <strong>حذف</strong> للتأكيد:</label>
+          <input type="text" id="confirm-delete-input" placeholder="اكتب: حذف" autocomplete="off">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-confirm-delete-execute" class="btn btn-danger" disabled>
+          <i class="fa-solid fa-trash"></i> تنفيذ الحذف
+        </button>
+        <button class="btn btn-outline btn-close-modal">إلغاء</button>
       </div>
     </div>
   </div>

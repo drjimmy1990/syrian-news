@@ -20,6 +20,7 @@ class Datastore {
         url_hash CHAR(64) NOT NULL UNIQUE,
         title_hash CHAR(64) NOT NULL UNIQUE,
         content_hash CHAR(64) NOT NULL,
+        content TEXT DEFAULT NULL,
         source_name TEXT NOT NULL,
         published_at TEXT,
         processed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -30,6 +31,18 @@ class Datastore {
       CREATE INDEX IF NOT EXISTS idx_articles_title_hash ON processed_articles(title_hash);
       CREATE INDEX IF NOT EXISTS idx_articles_processed_at ON processed_articles(processed_at);
     `);
+
+    // Migration: add 'content' column to existing databases that don't have it
+    try {
+      const cols = this.db.pragma('table_info(processed_articles)');
+      const hasContent = cols.some(c => c.name === 'content');
+      if (!hasContent) {
+        this.db.exec('ALTER TABLE processed_articles ADD COLUMN content TEXT DEFAULT NULL');
+        console.log('[DB] Migrated: added content column to processed_articles');
+      }
+    } catch (e) {
+      // Ignore if table doesn't exist yet (first-run case)
+    }
   }
 
   /**
@@ -209,21 +222,29 @@ class Datastore {
     `).get(urlHash, titleHash);
 
     if (existing) {
+      // Update WP post ID if provided, and always backfill content if it was NULL
+      const updates = [];
+      const params = [];
       if (wordpressPostId !== null) {
-        this.db.prepare(`
-          UPDATE processed_articles 
-          SET wordpress_post_id = ?, status = 'published'
-          WHERE id = ?
-        `).run(wordpressPostId, existing.id);
+        updates.push("wordpress_post_id = ?", "status = 'published'");
+        params.push(wordpressPostId);
+      }
+      if (article.content) {
+        updates.push("content = COALESCE(content, ?)");
+        params.push(article.content);
+      }
+      if (updates.length > 0) {
+        params.push(existing.id);
+        this.db.prepare(`UPDATE processed_articles SET ${updates.join(', ')} WHERE id = ?`).run(...params);
       }
       return existing.id;
     }
 
     const stmt = this.db.prepare(`
       INSERT INTO processed_articles 
-        (title, url, normalized_url, url_hash, title_hash, content_hash, source_name, published_at, wordpress_post_id, status)
+        (title, url, normalized_url, url_hash, title_hash, content_hash, content, source_name, published_at, wordpress_post_id, status)
       VALUES 
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     try {
@@ -234,6 +255,7 @@ class Datastore {
         urlHash,
         titleHash,
         contentHash,
+        article.content || null,
         article.source_name,
         article.published_at || null,
         wordpressPostId,
@@ -267,6 +289,112 @@ class Datastore {
     const result = stmt.run(`-${days} days`);
     this.db.exec('VACUUM');
     return result.changes;
+  }
+
+  /**
+   * Delete an article record by ID
+   */
+  deleteArticle(id) {
+    const stmt = this.db.prepare('DELETE FROM processed_articles WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Update an article's content (used by n8n AI rewriting workflow)
+   * @param {number} id - Article ID
+   * @param {Object} updates - Fields to update { content, status, wordpress_post_id }
+   * @returns {boolean} Success
+   */
+  updateArticleContent(id, updates = {}) {
+    const fields = [];
+    const values = [];
+    
+    if (updates.content !== undefined) {
+      fields.push('content = ?');
+      values.push(updates.content);
+      // Update content hash too
+      fields.push('content_hash = ?');
+      values.push(this.computeHash(updates.content));
+    }
+    if (updates.status !== undefined) {
+      fields.push('status = ?');
+      values.push(updates.status);
+    }
+    if (updates.wordpress_post_id !== undefined) {
+      fields.push('wordpress_post_id = ?');
+      values.push(updates.wordpress_post_id);
+    }
+
+    if (fields.length === 0) return false;
+
+    values.push(id);
+    const stmt = this.db.prepare(`UPDATE processed_articles SET ${fields.join(', ')} WHERE id = ?`);
+    const result = stmt.run(...values);
+    return result.changes > 0;
+  }
+
+  /**
+   * Delete ALL articles from the database and vacuum
+   */
+  deleteAllArticles() {
+    const countBefore = this.db.prepare('SELECT COUNT(*) as count FROM processed_articles').get().count;
+    this.db.exec('DELETE FROM processed_articles');
+    this.db.exec('VACUUM');
+    return countBefore;
+  }
+
+  /**
+   * Delete articles within a date range
+   * @param {string} startDate - ISO date string
+   * @param {string} endDate - ISO date string
+   * @returns {number} Number of deleted articles
+   */
+  deleteArticlesByDateRange(startDate, endDate) {
+    const stmt = this.db.prepare(
+      'DELETE FROM processed_articles WHERE processed_at >= ? AND processed_at <= ?'
+    );
+    const result = stmt.run(startDate, endDate);
+    return result.changes;
+  }
+
+  /**
+   * Delete all articles from a specific source
+   * @param {string} sourceName
+   * @returns {number} Number of deleted articles
+   */
+  deleteArticlesBySource(sourceName) {
+    const stmt = this.db.prepare('DELETE FROM processed_articles WHERE source_name = ?');
+    const result = stmt.run(sourceName);
+    return result.changes;
+  }
+
+  /**
+   * Delete ALL articles
+   * @returns {number} Number of deleted articles
+   */
+  deleteAllArticles() {
+    const stmt = this.db.prepare('DELETE FROM processed_articles');
+    const result = stmt.run();
+    return result.changes;
+  }
+
+  /**
+   * Get detailed article statistics
+   */
+  getArticleStats() {
+    const total = this.db.prepare('SELECT COUNT(*) as count FROM processed_articles').get().count;
+    const withContent = this.db.prepare("SELECT COUNT(*) as count FROM processed_articles WHERE content IS NOT NULL AND content != ''").get().count;
+    const published = this.db.prepare("SELECT COUNT(*) as count FROM processed_articles WHERE wordpress_post_id IS NOT NULL").get().count;
+    const oldest = this.db.prepare('SELECT MIN(processed_at) as d FROM processed_articles').get().d;
+    const newest = this.db.prepare('SELECT MAX(processed_at) as d FROM processed_articles').get().d;
+    const bySource = this.db.prepare(`
+      SELECT source_name, COUNT(*) as total,
+             SUM(CASE WHEN wordpress_post_id IS NOT NULL THEN 1 ELSE 0 END) as published,
+             SUM(CASE WHEN content IS NOT NULL AND content != '' THEN 1 ELSE 0 END) as withContent
+      FROM processed_articles GROUP BY source_name ORDER BY total DESC
+    `).all();
+    return { total, withContent, withoutContent: total - withContent, published, oldest, newest, bySource };
   }
 
   close() {
