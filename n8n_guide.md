@@ -263,33 +263,66 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
   - **Model**: `gpt-4o-mini` (or `gemini-1.5-flash` / `gemini-2.0-flash`)
   - **System Prompt**:
     ```text
-    أنت صحفي محترف في وكالة أنباء سورية. مهمتك إعادة صياغة الخبر التالي باللغة العربية الفصحى بأسلوب إخباري احترافي وجذاب.
+    أنت محرر أخبار محترف في وكالة أنباء سورية مستقلة. مهمتك إعادة صياغة الخبر التالي وتصنيفه.
 
-    القواعد:
-    - احتفظ بجميع الحقائق والأرقام والأسماء دون تغيير
-    - أعد الصياغة بأسلوبك الخاص دون نسخ النص الأصلي
-    - اجعل العنوان جذاباً ومختصراً
-    - احتفظ بهيكل HTML (الفقرات، القوائم، العناوين الفرعية)
-    - لا تضف معلومات جديدة
-    - الحد الأقصى للمحتوى: نفس طول النص الأصلي تقريباً
+    ═══════════════════════════
+    📝 قواعد إعادة الصياغة:
+    ═══════════════════════════
+    1. أعد الصياغة بأسلوبك الخاص باللغة العربية الفصحى — لا تنسخ النص الأصلي
+    2. احتفظ بجميع الحقائق والأرقام والأسماء والتواريخ دون أي تغيير
+    3. اجعل العنوان جذاباً ومختصراً (لا يتجاوز 15 كلمة)
+    4. لا تضف أي معلومات أو تحليلات أو آراء غير موجودة في النص الأصلي
+    5. حافظ على نفس طول المحتوى الأصلي تقريباً
 
-    أرجع النتيجة بتنسيق JSON فقط:
+    ═══════════════════════════
+    🧹 قواعد تنظيف HTML:
+    ═══════════════════════════
+    1. استخدم فقط: <p>, <h2>, <h3>, <strong>, <em>, <ul>, <ol>, <li>, <blockquote>, <figure>, <img>, <figcaption>
+    2. ❌ ممنوع منعاً باتاً: <a href>, <iframe>, <script>, <style>, <div>, <span>, <table>
+    3. ❌ لا تضع أي روابط (links) مطلقاً في المحتوى
+    4. ❌ لا تضع أي كلمات مثل "اقرأ المزيد" أو "المصدر" أو "شاهد أيضاً"
+    5. ✅ إذا وجدت صورة في المحتوى الأصلي، ضعها داخل <figure>:
+       <figure><img src="رابط_الصورة" alt="وصف الصورة" /><figcaption>وصف مختصر</figcaption></figure>
+    6. ابدأ المحتوى بفقرة تلخيصية قوية (lead paragraph)
+    7. استخدم عناوين فرعية <h3> لتقسيم المحتوى إذا كان طويلاً
+
+    ═══════════════════════════
+    📂 التصنيف — اختر تصنيفاً واحداً فقط:
+    ═══════════════════════════
+    - سياسة (أخبار سياسية، قرارات حكومية، علاقات دولية، دبلوماسية)
+    - عسكري وأمني (عمليات عسكرية، أمن، اشتباكات، إرهاب)
+    - اقتصاد (أسعار، تجارة، مشاريع اقتصادية، بنوك، عملات)
+    - مجتمع (شؤون اجتماعية، تعليم، صحة، بيئة، حوادث)
+    - رياضة (كرة قدم، رياضات متنوعة، بطولات)
+    - ثقافة وفن (فن، أدب، سينما، مسرح، موسيقى)
+    - تكنولوجيا (تقنية، إنترنت، ذكاء اصطناعي، اتصالات)
+    - دولي (أخبار العالم غير المتعلقة مباشرة بسوريا)
+    - محلي (أخبار المحافظات والمدن السورية، بلديات، خدمات)
+
+    ═══════════════════════════
+    📤 شكل الإخراج — JSON فقط:
+    ═══════════════════════════
     {
       "title": "العنوان المُعاد صياغته",
-      "content": "المحتوى المُعاد صياغته بصيغة HTML"
+      "content": "المحتوى بصيغة HTML نظيفة",
+      "category": "اسم التصنيف"
     }
+
+    ⚠️ أرجع JSON فقط بدون أي نص إضافي أو شرح أو markdown.
     ```
   - **User Prompt**:
     ```text
-    أعد صياغة هذا الخبر:
+    أعد صياغة وصنّف هذا الخبر:
 
     العنوان: {{ $json.title }}
+
+    المصدر: {{ $json.source_name }}
 
     المحتوى:
     {{ $json.content }}
     ```
   - **Temperature**: `0.3` *(Slightly higher for vocabulary variation)*
-- **Purpose**: Paraphrases the article content and constructs a premium rewritten title and body.
+- **Purpose**: Paraphrases the article, produces clean HTML with no links, and classifies it into one of the predefined news categories.
 
 ### Node 11: Parse Rewritten Content (Code)
 - **Name**: `Parse Rewritten Content`
@@ -298,7 +331,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
   - **Language**: `JavaScript`
   - **JS Code**:
     ```javascript
-    const raw = $input.first().json.message?.content || $input.first().json.text || '';
+    const raw = $input.first().json.message?.content || $input.first().json.text || $input.first().json.output || '';
     const originalArticle = $('Parse AI Decision').first().json;
 
     let rewritten;
@@ -310,23 +343,33 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     } catch (e) {
       rewritten = {
         title: originalArticle.title,
-        content: raw
+        content: raw,
+        category: 'محلي'
       };
     }
+
+    // Strip any <a> tags the AI might have sneaked in
+    let cleanContent = (rewritten.content || raw)
+      .replace(/<a[^>]*>(.*?)<\/a>/gi, '$1')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
 
     return [{
       json: {
         articleId: originalArticle.articleId,
         originalTitle: originalArticle.title,
         rewrittenTitle: rewritten.title || originalArticle.title,
-        rewrittenContent: rewritten.content || raw,
+        rewrittenContent: cleanContent,
+        category: rewritten.category || 'محلي',
         url: originalArticle.url,
         source_name: originalArticle.source_name,
-        image_url: originalArticle.image_url
+        image_url: originalArticle.image_url,
+        aggregatorUrl: originalArticle.aggregatorUrl
       }
     }];
     ```
-- **Purpose**: Extracts the rewritten title and HTML content from the LLM.
+- **Purpose**: Extracts the rewritten title, content, and category from the LLM. Also performs a safety cleanup to strip any links/scripts that the AI might have included.
 
 ### Node 12: Build WP Payload (Code)
 - **Name**: `Build WP Payload`
@@ -338,6 +381,23 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     const article = $input.first().json;
     const config = $('⚙️ Configuration').first().json;
 
+    // Category slug mapping (Arabic name → WordPress slug)
+    // ⚠️ You MUST create these categories in WordPress first!
+    // Go to: WordPress → Posts → Categories → Add each one
+    const categoryMap = {
+      'سياسة': 'politics',
+      'عسكري وأمني': 'military-security',
+      'اقتصاد': 'economy',
+      'مجتمع': 'society',
+      'رياضة': 'sports',
+      'ثقافة وفن': 'culture-art',
+      'تكنولوجيا': 'technology',
+      'دولي': 'international',
+      'محلي': 'local'
+    };
+
+    const categorySlug = categoryMap[article.category] || 'local';
+
     // RTL Blockquote style for WordPress
     const attribution = `
     <blockquote style="direction: rtl; text-align: right; border-right: 4px solid #3b82f6; padding: 12px; margin: 20px 0; background: #f8f9fa; font-size: 14px;">
@@ -347,7 +407,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
 
     // Only add the image HTML if an image_url actually exists
     const imageHtml = article.image_url 
-      ? `<img src="${article.image_url}" alt="${article.rewrittenTitle}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 20px; display: block;" />` 
+      ? `<figure style="margin: 0 0 20px 0;"><img src="${article.image_url}" alt="${article.rewrittenTitle}" style="max-width: 100%; height: auto; border-radius: 8px; display: block;" /></figure>` 
       : '';
 
     const fullContent = `<div dir="rtl" style="text-align: right;">
@@ -361,10 +421,13 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
         articleId: article.articleId,
         wpUrl: config.wpUrl,
         wpPostStatus: config.wpPostStatus,
+        categorySlug: categorySlug,
+        categoryArabic: article.category,
         postPayload: {
           title: article.rewrittenTitle,
           content: fullContent,
           status: config.wpPostStatus,
+          categories: categorySlug,
           meta: {
             source_url: article.url,
             source_name: article.source_name
@@ -373,7 +436,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
       }
     }];
     ```
-- **Purpose**: Assembles the post title and HTML content, including an elegant source attribution card at the bottom.
+- **Purpose**: Assembles the post title, clean HTML content, category, and source attribution for WordPress publishing.
 
 ### Node 13: Publish to WordPress (WordPress Node)
 - **Name**: `📤 Publish to WordPress`
