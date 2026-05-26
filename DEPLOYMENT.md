@@ -182,3 +182,25 @@ curl http://127.0.0.1:3000/api/stats
 - [ ] SSL مفعّل (إذا عندك دومين)
 - [ ] Cron مضاف للجلب التلقائي
 - [ ] `pm2 startup` + `pm2 save` مفعّل
+
+
+
+
+
+cd /www/wwwroot
+git clone https://github.com/drjimmy1990/syrian-news.git
+cd syrian-news
+npm install
+mkdir -p logs
+nano config.json   # edit credentials
+pm2 start ecosystem.config.js
+pm2 save && pm2 startup
+
+
+cd /www/wwwroot
+git clone https://github.com/drjimmy1990/syrian-news.git
+cd syrian-news
+npm install
+mkdir -p logs
+pm2 start ecosystem.config.js
+pm2 save && pm2 startup

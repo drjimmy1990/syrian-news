@@ -144,6 +144,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
         title: article.title,
         source_name: article.source_name,
         url: article.url,
+        image_url: article.image_url,
         existingTitles: existingTitles.join('\n')
       }
     }));
@@ -213,6 +214,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
         title: article.title,
         source_name: article.source_name,
         url: article.url,
+        image_url: article.image_url,
         isDuplicate: result.isDuplicate === true,
         matchedTitle: result.matchedTitle || null,
         confidence: result.confidence || 0,
@@ -315,7 +317,8 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
         rewrittenTitle: rewritten.title || originalArticle.title,
         rewrittenContent: rewritten.content || raw,
         url: originalArticle.url,
-        source_name: originalArticle.source_name
+        source_name: originalArticle.source_name,
+        image_url: originalArticle.image_url
       }
     }];
     ```
@@ -338,7 +341,13 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
       <a href="${article.url}" target="_blank" rel="noopener noreferrer">الرابط الأصلي للمصدر</a>
     </blockquote>`;
 
+    // Only add the image HTML if an image_url actually exists
+    const imageHtml = article.image_url 
+      ? `<img src="${article.image_url}" alt="${article.rewrittenTitle}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 20px; display: block;" />` 
+      : '';
+
     const fullContent = `<div dir="rtl" style="text-align: right;">
+    ${imageHtml}
     ${article.rewrittenContent}
     ${attribution}
     </div>`;
