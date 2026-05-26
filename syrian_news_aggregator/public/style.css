@@ -1102,6 +1102,14 @@ a:hover {
 .modal-container.large { max-width: 900px; }
 .modal-container.medium { max-width: 600px; }
 
+.modal-container > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .modal-header {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-color);
@@ -1130,6 +1138,8 @@ a:hover {
 .modal-body {
   padding: 24px;
   overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .modal-footer {
@@ -1386,6 +1396,46 @@ a:hover {
   border-radius: 4px;
   font-size: 0.8rem;
 }
+
+/* Test Diagnostics Panel */
+.test-diag-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.test-diag-item small {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.test-diag-item span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Content status badge in test results */
+.content-status-full {
+  color: #34d399;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+.content-status-empty {
+  color: #fbbf24;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
 .test-article-card {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -1446,6 +1496,27 @@ tr.source-row-broken {
 }
 tr.source-row-broken td:first-child {
   opacity: 0.85;
+}
+
+/* Source ON/OFF status label */
+.source-status-label {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+.source-status-label.status-on {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.source-status-label.status-off {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 /* "متوقف تلقائياً" label next to the name */

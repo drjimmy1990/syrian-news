@@ -276,6 +276,71 @@ app.get('/api/articles/stats', (req, res) => {
 });
 
 /**
+ * GET /api/articles/recent-titles - Retrieve recent article titles for AI deduplication.
+ * Used by the n8n AI dedup workflow to compare incoming articles against already-processed ones.
+ * Query params: ?limit=50 (default 50, max 200)
+ */
+app.get('/api/articles/recent-titles', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+
+  try {
+    const ds = new Datastore(dbPath);
+    const titles = ds.getRecentTitles(limit);
+    ds.close();
+    res.json({ success: true, count: titles.length, titles });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/articles/:id/mark-duplicate - Mark an article as duplicate (used by n8n dedup workflow)
+ */
+app.post('/api/articles/:id/mark-duplicate', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  const id = parseInt(req.params.id);
+  const { matchedTitle } = req.body;
+
+  if (isNaN(id)) {
+    return res.status(400).json({ success: false, error: 'Invalid article ID.' });
+  }
+
+  try {
+    const ds = new Datastore(dbPath);
+    const updated = ds.markAsDuplicateSkipped(id, matchedTitle || null);
+    ds.close();
+
+    if (updated) {
+      res.json({ success: true, message: `Article ${id} marked as duplicate_skipped.` });
+    } else {
+      res.status(404).json({ success: false, error: 'Article not found.' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/sources/stats - Per-source statistics from the database for dashboard source cards
+ */
+app.get('/api/sources/stats', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+
+  try {
+    const ds = new Datastore(dbPath);
+    const perSourceStats = ds.getPerSourceStats();
+    ds.close();
+    res.json({ success: true, stats: perSourceStats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * DELETE /api/articles/:id - Delete an article from database (and optionally WordPress)
  */
 app.delete('/api/articles/:id', async (req, res) => {
@@ -399,12 +464,17 @@ app.post('/api/sources/ai-detect', async (req, res) => {
     if (n8nConfig.enabled && n8nConfig.selectorsWebhookUrl) {
       console.log(`[n8n Trigger] Forwarding AI selector discovery for ${url} to n8n webhook`);
       
-      const payload = {
-        targetUrl: url,
-        aggregatorBaseUrl: req.protocol + '://' + req.get('host')
-      };
-
       try {
+        const { fetchPageContent } = require('./scraper');
+        console.log(`[n8n Trigger] Fetching clean DOM for n8n payload...`);
+        const html = await fetchPageContent(url, 'utf-8', 15000);
+        
+        const payload = {
+          targetUrl: url,
+          html: html,
+          aggregatorBaseUrl: req.protocol + '://' + req.get('host')
+        };
+
         // Trigger n8n webhook
         const n8nResponse = await axios.post(n8nConfig.selectorsWebhookUrl, payload, { timeout: 25000 });
         
@@ -535,6 +605,41 @@ app.delete('/api/sources/:index', (req, res) => {
 });
 
 /**
+ * POST /api/sources/bulk-ai-toggle - Enable/disable AI fallback for ALL sources at once
+ */
+app.post('/api/sources/bulk-ai-toggle', (req, res) => {
+  try {
+    const config = readConfig();
+    const { allowAiFallback } = req.body;
+
+    if (typeof allowAiFallback !== 'boolean') {
+      return res.status(400).json({ success: false, error: 'allowAiFallback must be a boolean value.' });
+    }
+
+    if (!config.sources || config.sources.length === 0) {
+      return res.json({ success: true, message: 'لا توجد مصادر لتحديثها.', updatedCount: 0 });
+    }
+
+    let updatedCount = 0;
+    config.sources.forEach(source => {
+      source.allowAiFallback = allowAiFallback;
+      updatedCount++;
+    });
+
+    saveConfig(config);
+
+    const stateText = allowAiFallback ? 'تفعيل' : 'تعطيل';
+    res.json({
+      success: true,
+      message: `تم ${stateText} الذكاء الاصطناعي لجميع المصادر (${updatedCount} مصدر).`,
+      updatedCount
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/test-wp - Quick connection probe to WordPress REST API
  */
 app.post('/api/test-wp', async (req, res) => {
@@ -612,28 +717,43 @@ app.post('/api/test-ai', async (req, res) => {
  * POST /api/sources/auto-detect - Auto-probe website scraping options
  */
 app.post('/api/sources/auto-detect', async (req, res) => {
-  const { url } = req.body;
+  const { url, skipAi } = req.body;
   if (!url) {
     return res.status(400).json({ success: false, error: 'Target URL is required.' });
   }
 
   try {
     const config = readConfig();
+    
+    // Find the source to check its individual AI preference
+    const sourceObj = config.sources.find(s => s.url === url) || {};
+    const allowAi = skipAi ? false : (sourceObj.allowAiFallback !== false); // default to true unless explicitly false
+
     const { autoDetectStrategy } = require('./scraper');
     const result = await autoDetectStrategy(url, config);
     
     // If autoDetectStrategy falls back to heuristics (strategy = 'html') and validation found 0 articles,
     // we should route to n8n or AI as a more robust fallback!
     if (result && result.success && result.strategy === 'html' && 
-        (!result.validationResult || result.validationResult.articlesFound === 0)) {
+        (!result.validationResult || result.validationResult.articlesFound === 0) && allowAi) {
         
         console.log(`[Server] Standard heuristics failed for ${url}. Falling back to robust AI/n8n...`);
         const n8nConfig = config.n8n || {};
         
         if (n8nConfig.enabled && n8nConfig.selectorsWebhookUrl) {
           const axios = require('axios');
-          const payload = { targetUrl: url, aggregatorBaseUrl: req.protocol + '://' + req.get('host') };
+          const { fetchPageContent } = require('./scraper');
+          
           try {
+            console.log(`[n8n Fallback] Fetching clean DOM for n8n payload...`);
+            const html = await fetchPageContent(url, 'utf-8', 15000);
+            
+            const payload = { 
+              targetUrl: url, 
+              html: html,
+              aggregatorBaseUrl: req.protocol + '://' + req.get('host') 
+            };
+            
             const n8nResponse = await axios.post(n8nConfig.selectorsWebhookUrl, payload, { timeout: 25000 });
             const n8nData = n8nResponse.data;
             if (n8nData && (n8nData.selectors || (n8nData.success && n8nData.result))) {
@@ -684,6 +804,7 @@ app.post('/api/sources/auto-detect', async (req, res) => {
 
 /**
  * POST /api/sources/:index/test - Test scrape a single source configuration in isolation
+ * Query params: ?limit=N (override test article count, defaults to source maxArticles or 5)
  */
 app.post('/api/sources/:index/test', async (req, res) => {
   const config = readConfig();
@@ -696,11 +817,29 @@ app.post('/api/sources/:index/test', async (req, res) => {
   const source = config.sources[index];
   const { fetchArticles } = require('./scraper');
 
-  console.log(`[Server] Isolated scrape test initiated for: ${source.name} [Index ${index}]`);
+  // Determine test limit: query param > source maxArticles > global maxArticles > 5
+  const globalMax = config.general ? (config.general.maxArticlesPerSource || 3) : 3;
+  const testLimit = req.query.limit 
+    ? parseInt(req.query.limit) 
+    : (source.maxArticles || globalMax);
+  
+  const diagnostics = {
+    strategy: source.strategy || 'html',
+    scrapeTimeout: source.scrapeTimeout || 8000,
+    crawlDepth: source.crawlDepth || 'list+article',
+    retryCount: source.retryCount || 0,
+    maxArticles: testLimit,
+    priority: source.priority || 5,
+    encoding: source.encoding || 'utf-8'
+  };
+
+  console.log(`[Server] Isolated scrape test initiated for: ${source.name} [Index ${index}] — limit: ${testLimit}, strategy: ${diagnostics.strategy}, depth: ${diagnostics.crawlDepth}`);
+  
+  const startTime = Date.now();
 
   try {
-    // Force limit of 2 for testing
-    const articles = await fetchArticles([source], 2);
+    const articles = await fetchArticles([source], testLimit);
+    const durationMs = Date.now() - startTime;
 
     // Save test diagnostics metadata
     source.lastTestedAt = new Date().toISOString();
@@ -717,6 +856,8 @@ app.post('/api/sources/:index/test', async (req, res) => {
       warning: !hasArticles ? 'تم الاتصال بالمصدر بنجاح لكن لم يتم العثور على أي مقالات. قد يعني هذا أن محددات CSS غير صحيحة أو أن الصفحة فارغة.' : null,
       sourceName: source.name,
       strategy: source.strategy,
+      diagnostics,
+      durationMs,
       articlesCount: articles.length,
       lastTestedAt: source.lastTestedAt,
       lastTestStatus: source.lastTestStatus,
@@ -726,10 +867,12 @@ app.post('/api/sources/:index/test', async (req, res) => {
         url: art.url,
         published_at: art.published_at,
         contentLength: art.content ? art.content.length : 0,
-        contentPreview: art.content ? art.content.replace(/<[^>]*>/g, '').slice(0, 300) + '...' : ''
+        contentPreview: art.content ? art.content.replace(/<[^>]*>/g, '').slice(0, 400) + '...' : '',
+        hasFullContent: !!(art.content && art.content.length > 100)
       }))
     });
   } catch (error) {
+    const durationMs = Date.now() - startTime;
     console.error(`[Server Error] Isolated test scraping failed: ${error.message}`);
     
     // Save failed test diagnostics metadata — increment consecutive failures
@@ -742,6 +885,8 @@ app.post('/api/sources/:index/test', async (req, res) => {
     res.json({ 
       success: false, 
       error: `Scraping failed: ${error.message}`,
+      diagnostics,
+      durationMs,
       lastTestedAt: source.lastTestedAt,
       lastTestStatus: source.lastTestStatus,
       lastTestError: source.lastTestError,

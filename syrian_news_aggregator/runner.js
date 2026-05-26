@@ -66,17 +66,47 @@ async function runPipeline(options = {}) {
     duplicatesSkipped: 0,
     articlesRewritten: 0,
     articlesPublished: 0,
-    publishFailures: 0
+    publishFailures: 0,
+    perSource: []
   };
 
+  // Sort sources by priority (lower number = processed first, default = 5)
+  const sortedSources = [...sources].sort((a, b) => {
+    const pA = a.priority !== undefined ? a.priority : 5;
+    const pB = b.priority !== undefined ? b.priority : 5;
+    return pA - pB;
+  });
+
+  if (sortedSources.some(s => s.priority !== undefined)) {
+    console.log(`[Runner] Sources sorted by priority: ${sortedSources.map(s => `${s.name}(p${s.priority || 5})`).join(', ')}`);
+  }
+
   try {
-    for (let i = 0; i < sources.length; i++) {
-      const source = sources[i];
-      console.log(`\n[Runner] [${i + 1}/${sources.length}] Processing source: ${source.name}`);
+    for (let i = 0; i < sortedSources.length; i++) {
+      const source = sortedSources[i];
+      const sourceStartTime = Date.now();
+      const sourceStats = {
+        name: source.name,
+        strategy: source.strategy,
+        maxArticles: source.maxArticles !== undefined ? source.maxArticles : maxArticlesPerSource,
+        crawlDepth: source.crawlDepth || 'list+article',
+        articlesFound: 0,
+        duplicatesSkipped: 0,
+        published: 0,
+        rewritten: 0,
+        errors: 0,
+        durationMs: 0
+      };
+
+      console.log(`\n[Runner] [${i + 1}/${sortedSources.length}] Processing source: ${source.name} (priority: ${source.priority || 5}, max: ${sourceStats.maxArticles}, depth: ${sourceStats.crawlDepth})`);
       
       try {
+        // Use per-source maxArticles with fallback to global setting
+        const effectiveMax = source.maxArticles !== undefined ? source.maxArticles : maxArticlesPerSource;
+        
         // Fetch articles from the source (returns formatted Article schemas)
-        const articles = await fetchArticles([source], maxArticlesPerSource, sinceDate);
+        const articles = await fetchArticles([source], effectiveMax, sinceDate);
+        sourceStats.articlesFound = articles.length;
         console.log(`[Runner] Found ${articles.length} articles for ${source.name}`);
         
         for (const article of articles) {
@@ -87,6 +117,7 @@ async function runPipeline(options = {}) {
           if (isDuplicate) {
             console.log(`[Runner] Duplicate detected. Skipping: "${article.title}" (${article.url})`);
             stats.duplicatesSkipped++;
+            sourceStats.duplicatesSkipped++;
             // Backfill content for articles stored before content column existed
             if (article.content) {
               db.saveArticle(article);
@@ -105,10 +136,21 @@ async function runPipeline(options = {}) {
             if (rewrittenContent && rewrittenContent !== originalContent) {
               article.content = rewrittenContent;
               stats.articlesRewritten++;
+              sourceStats.rewritten++;
               console.log(`[Runner] Content successfully rewritten by AI.`);
             } else {
               console.log(`[Runner] Content left unmodified by AI (or bypass triggered).`);
             }
+          }
+
+          if (wpConfig.disablePublish) {
+            console.log(`[Runner] WordPress publishing is disabled in configuration. Saving article directly as 'processed' to SQLite datastore.`);
+            const insertId = db.saveArticle(article, null);
+            if (insertId) {
+              stats.articlesPublished++;
+              sourceStats.published++;
+            }
+            continue;
           }
 
           console.log(`[Runner] Publishing article to WordPress...`);
@@ -123,10 +165,12 @@ async function runPipeline(options = {}) {
             const insertId = db.saveArticle(article, publishResult.postId);
             if (insertId) {
               stats.articlesPublished++;
+              sourceStats.published++;
             }
           } else {
             console.error(`[Runner Error] Failed to publish article: "${article.title}". Error: ${publishResult.error}`);
             stats.publishFailures++;
+            sourceStats.errors++;
             
             // Still register the article in DB (without WP Post ID) to prevent infinite re-tries next time
             db.saveArticle(article, null);
@@ -134,10 +178,15 @@ async function runPipeline(options = {}) {
         }
       } catch (srcErr) {
         console.error(`[Runner Error] Critical failure scraping/publishing for source ${source.name}: ${srcErr.message}`);
+        sourceStats.errors++;
       }
 
+      sourceStats.durationMs = Date.now() - sourceStartTime;
+      stats.perSource.push(sourceStats);
+      console.log(`[Runner] Source "${source.name}" completed in ${sourceStats.durationMs}ms — found: ${sourceStats.articlesFound}, dupes: ${sourceStats.duplicatesSkipped}, published: ${sourceStats.published}`);
+
       // Enforce firewall-bypassing rate limit between different sources
-      if (i < sources.length - 1) {
+      if (i < sortedSources.length - 1) {
         const delay = typeof rateLimitDelay === 'function' 
           ? rateLimitDelay() 
           : (Math.floor(Math.random() * 1000) + rateLimitDelay); // add jitter
@@ -160,6 +209,14 @@ async function runPipeline(options = {}) {
 
   console.log('\n[Runner] Pipeline execution finished.');
   console.log(`Summary: Sources: ${stats.totalSources}, Scraped: ${stats.articlesScraped}, Duplicates Skipped: ${stats.duplicatesSkipped}, Rewritten by AI: ${stats.articlesRewritten}, Published: ${stats.articlesPublished}, Failures: ${stats.publishFailures}`);
+  
+  // Per-source breakdown
+  if (stats.perSource.length > 0) {
+    console.log('\n[Runner] Per-Source Breakdown:');
+    stats.perSource.forEach(s => {
+      console.log(`  → ${s.name} [${s.strategy}]: found=${s.articlesFound}, dupes=${s.duplicatesSkipped}, published=${s.published}, errors=${s.errors}, time=${s.durationMs}ms`);
+    });
+  }
   
   return stats;
 }

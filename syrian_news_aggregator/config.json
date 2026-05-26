@@ -4,7 +4,8 @@
     "username": "aggregator_user",
     "appPassword": "",
     "statusMode": "draft",
-    "isDryRun": true
+    "isDryRun": true,
+    "disablePublish": true
   },
   "aiRewriter": {
     "enabled": false,
@@ -16,7 +17,7 @@
   "general": {
     "dbPath": "news_aggregator.db",
     "rateLimitDelay": 1500,
-    "maxArticlesPerSource": 3
+    "maxArticlesPerSource": 50
   },
   "n8n": {
     "enabled": false,
@@ -35,23 +36,24 @@
         "list": {
           "container": "article",
           "title": "h2.entry-title a",
-          "link": "h2.entry-title a"
+          "link": "a"
         },
         "article": {
           "title": "h1.entry-title",
           "content": ".entry-content",
-          "date": ".post-date time"
+          "date": "time"
         }
       },
-      "lastTestedAt": "2026-05-23T00:59:39.176Z",
+      "lastTestedAt": "2026-05-26T01:19:54.651Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
-      "name": "alwatanonline.com",
-      "url": "https://www.alwatanonline.com",
-      "rssUrl": null,
-      "strategy": "html",
+      "name": "الدفاع المدني السوري",
+      "url": "https://whitehelmets.org/index.php/ar/alalam/akhbar-wtqaryr-alamyt",
+      "rssUrl": "https://whitehelmets.org/sitemap.xml",
+      "strategy": "sitemap",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
@@ -62,153 +64,110 @@
         },
         "article": {
           "title": "h1",
-          "content": ".content",
-          "date": "time"
+          "content": ".field--name-body",
+          "date": "time[datetime]"
         }
       },
-      "lastTestedAt": "2026-05-23T02:52:52.641Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "timeout of 8000ms exceeded",
-      "consecutiveFailures": 1
-    },
-    {
-      "name": "الدفاع المدني السوري",
-      "url": "https://whitehelmets.org/index.php/ar/alalam/akhbar-wtqaryr-alamyt",
-      "rssUrl": null,
-      "strategy": "html",
-      "enabled": true,
-      "encoding": "utf-8",
-      "selectors": {
-        "list": {
-          "container": ".views-row",
-          "title": "h3.card-title",
-          "link": "a"
-        },
-        "article": {
-          "title": "h1.page-title",
-          "content": ".content-body",
-          "date": "span.created"
-        }
-      },
-      "lastTestedAt": "2026-05-23T00:59:49.015Z",
+      "lastTestedAt": "2026-05-25T20:15:03.028Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
       "name": "الوكالة العربية السورية للأنباء (سانا)",
       "url": "https://sana.sy",
-      "rssUrl": "https://sana.sy/?feed=rss2",
-      "strategy": "wp_api",
+      "rssUrl": "https://sana.sy/feed/",
+      "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
           "container": "article",
           "title": "h2 a",
-          "link": "h2 a"
+          "link": "a"
         },
         "article": {
-          "title": "h1.entry-title",
+          "title": ".entry-title",
           "content": ".entry-content",
-          "date": "time.entry-date"
+          "date": "time[datetime]"
         }
       },
-      "lastTestedAt": "2026-05-23T00:59:52.162Z",
+      "lastTestedAt": "2026-05-26T00:59:53.950Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
       "name": "الإخبارية السورية",
       "url": "https://alikhbariah.com",
       "rssUrl": "https://alikhbariah.com/feed",
-      "strategy": "html",
-      "enabled": true,
-      "encoding": "utf-8",
-      "selectors": {
-        "list": {
-          "container": ".post",
-          "title": "h2 a",
-          "link": "h2 a"
-        },
-        "article": {
-          "title": "h1.post-title",
-          "content": ".post-content",
-          "date": ".post-date"
-        }
-      },
-      "lastTestedAt": "2026-05-23T00:59:53.839Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "تلفزيون سوريا",
-      "url": "https://www.syria.tv",
-      "rssUrl": "https://www.syria.tv/feed",
-      "strategy": "rss",
-      "enabled": true,
-      "encoding": "utf-8",
-      "selectors": {
-        "list": {
-          "container": "article",
-          "title": "h3 a",
-          "link": "a"
-        },
-        "article": {
-          "title": "h1.title",
-          "content": ".post-content",
-          "date": ".date"
-        }
-      },
-      "lastTestedAt": "2026-05-23T00:59:56.997Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "زمان الوصل",
-      "url": "https://www.zamanalwsl.net",
-      "rssUrl": "https://www.zamanalwsl.net/rss",
-      "strategy": "rss",
-      "enabled": true,
-      "encoding": "utf-8",
-      "selectors": {
-        "list": {
-          "container": ".news-item",
-          "title": "h2 a",
-          "link": "a"
-        },
-        "article": {
-          "title": "h1",
-          "content": ".news-content",
-          "date": ".news-date"
-        }
-      },
-      "lastTestedAt": "2026-05-23T02:54:04.850Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "شبكة شام الإخبارية",
-      "url": "https://shaam.org",
-      "rssUrl": "https://shaam.org/feed",
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
           "container": "article",
-          "title": "h2 a",
-          "link": "h2 a"
+          "title": "h2.entry-title a",
+          "link": "a"
         },
         "article": {
-          "title": "h1.post-title",
-          "content": ".post-content",
-          "date": ".post-date"
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
         }
       },
-      "lastTestedAt": "2026-05-23T02:55:43.821Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "WP-API strategy failed (response.data.map is not a function) and RSS fallback failed (Attribute without value\nLine: 10\nColumn: 71\nChar: /)",
-      "consecutiveFailures": 3
+      "lastTestedAt": "2026-05-24T01:09:10.931Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
+    },
+    {
+      "name": "تلفزيون سوريا",
+      "url": "https://www.syria.tv",
+      "rssUrl": "https://www.syria.tv/rss",
+      "strategy": "rss",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "main h1",
+          "content": ".content-body",
+          "date": "time"
+        }
+      },
+      "lastTestedAt": "2026-05-25T20:28:45.515Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
+    },
+    {
+      "name": "شبكة شام الإخبارية",
+      "url": "https://shaam.org",
+      "rssUrl": "https://shaam.org/sitemap.xml",
+      "strategy": "sitemap",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "lastTestedAt": "2026-05-25T20:31:10.860Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
       "name": "أثر برس",
@@ -217,9 +176,22 @@
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T02:55:13.996Z",
+      "lastTestedAt": "2026-05-25T20:19:54.920Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "سناك سوري",
@@ -228,9 +200,22 @@
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:17.634Z",
+      "lastTestedAt": "2026-05-24T01:09:33.047Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "حلب اليوم",
@@ -239,21 +224,46 @@
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:20.021Z",
+      "lastTestedAt": "2026-05-25T20:32:29.838Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "نداء بوست",
       "url": "https://nedaa-post.com/",
       "rssUrl": "https://nedaa-post.com/feed",
-      "strategy": "wp_api",
+      "strategy": "html",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:21.403Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "WP-API strategy failed (Request failed with status code 404) and RSS fallback failed (Request failed with status code 404)",
-      "consecutiveFailures": 2
+      "lastTestedAt": "2026-05-24T01:09:38.349Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".post-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "صوت العاصمة",
@@ -262,9 +272,22 @@
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:24.130Z",
+      "lastTestedAt": "2026-05-25T20:32:45.468Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "شبكة نداء الفرات",
@@ -273,20 +296,46 @@
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:26.076Z",
+      "lastTestedAt": "2026-05-24T01:09:43.556Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "فرات بوست",
       "url": "https://euphratespost.net/ar/",
-      "rssUrl": "https://euphratespost.net/ar/feed",
-      "strategy": "wp_api",
+      "rssUrl": "https://euphratespost.net/ar/feed/",
+      "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:27.367Z",
+      "lastTestedAt": "2026-05-24T01:09:45.677Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".article-body",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "الرئيسية",
@@ -295,9 +344,206 @@
       "strategy": "html",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:28.373Z",
+      "lastTestedAt": "2026-05-24T01:09:47.608Z",
       "lastTestStatus": "success",
       "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".entry-content",
+          "date": "meta[property=\"article:published_time\"]"
+        }
+      },
+      "allowAiFallback": false
+    },
+    {
+      "name": "صحيفة الفرات",
+      "url": "https://furat.alwehda.gov.sy/?cat=17",
+      "rssUrl": "https://furat.alwehda.gov.sy/?feed=rss2",
+      "strategy": "rss",
+      "enabled": true,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-24T01:09:50.607Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": ".post-title",
+          "content": "article",
+          "date": "time[datetime]"
+        }
+      },
+      "allowAiFallback": false
+    },
+    {
+      "name": "صحيفة الثورة",
+      "url": "http://Thawra.sy",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": "main",
+          "date": "meta[property=\"article:published_time\"]"
+        }
+      },
+      "lastTestedAt": "2026-05-25T20:41:07.138Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
+    },
+    {
+      "name": "صحيفة الوحدة",
+      "url": "https://alwehda-news.sy/",
+      "rssUrl": "https://alwehda-news.sy/feed/",
+      "strategy": "rss",
+      "enabled": true,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-24T01:09:55.549Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": ".entry-title",
+          "content": ".entry-content",
+          "date": "time[datetime]"
+        }
+      },
+      "allowAiFallback": false
+    },
+    {
+      "name": "صحيفة العروبة",
+      "url": "http://ouruba.alwehda.gov.sy/",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": true,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-24T01:10:04.468Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": ".post-title",
+          "content": ".entry-content",
+          "date": "time[datetime]"
+        }
+      },
+      "allowAiFallback": false
+    },
+    {
+      "name": "وكالة سوريا الجديدة",
+      "url": "https://nsasyr.net/",
+      "rssUrl": "https://nsasyr.net/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-24T01:10:08.789Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
+    },
+    {
+      "name": "سيريا لايف",
+      "url": "https://www.syria-life.com/",
+      "rssUrl": "https://www.syria-life.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-24T01:10:12.450Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
+    },
+    {
+      "name": "سوكة نيوز",
+      "url": "https://www.sookeh.com/",
+      "rssUrl": "https://www.sookeh.com/feed",
+      "strategy": "wp_api",
+      "enabled": true,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-24T01:10:14.378Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false,
+      "retryCount": 0,
+      "crawlDepth": "list+article",
+      "priority": 5
+    },
+    {
+      "name": "اخبار سوريا - الجزيرة",
+      "url": "https://www.aljazeera.net/where/mideast/arab/syria/",
+      "rssUrl": null,
+      "strategy": "html",
+      "enabled": false,
+      "encoding": "utf-8",
+      "lastTestedAt": "2026-05-25T20:42:09.714Z",
+      "lastTestStatus": "failed",
+      "lastTestError": "timeout of 8000ms exceeded",
+      "consecutiveFailures": 0,
+      "allowAiFallback": false,
       "selectors": {
         "list": {
           "container": "article",
@@ -312,115 +558,11 @@
       }
     },
     {
-      "name": "صحيفة الفرات",
-      "url": "https://furat.alwehda.gov.sy/?cat=17",
-      "rssUrl": null,
-      "strategy": "wp_api",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:30.412Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "response.data.map is not a function",
-      "consecutiveFailures": 2
-    },
-    {
-      "name": "صحيفة الثورة",
-      "url": "http://Thawra.sy",
-      "rssUrl": null,
-      "strategy": "html",
-      "enabled": true,
-      "encoding": "utf-8",
-      "selectors": {
-        "list": {
-          "container": ".views-row",
-          "title": "a",
-          "link": "a"
-        },
-        "article": {
-          "title": "h1",
-          "content": ".content-body",
-          "date": ".created"
-        }
-      },
-      "lastTestedAt": "2026-05-23T01:00:31.418Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "صحيفة الوحدة",
-      "url": "https://alwehda-news.sy/",
-      "rssUrl": null,
-      "strategy": "wp_api",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:32.655Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "Request failed with status code 404",
-      "consecutiveFailures": 2
-    },
-    {
-      "name": "صحيفة العروبة",
-      "url": "http://ouruba.alwehda.gov.sy/",
-      "rssUrl": null,
-      "strategy": "wp_api",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:35.900Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "response.data.map is not a function",
-      "consecutiveFailures": 2
-    },
-    {
-      "name": "وكالة سوريا الجديدة",
-      "url": "https://nsasyr.net/",
-      "rssUrl": "https://nsasyr.net/feed",
-      "strategy": "wp_api",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:39.772Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "سيريا لايف",
-      "url": "https://www.syria-life.com/",
-      "rssUrl": null,
-      "strategy": "wp_api",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:42.153Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "سوكة نيوز",
-      "url": "https://www.sookeh.com/",
-      "rssUrl": null,
-      "strategy": "wp_api",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:43.924Z",
-      "lastTestStatus": "success",
-      "consecutiveFailures": 0
-    },
-    {
-      "name": "اخبار سوريا - الجزيرة",
-      "url": "https://www.aljazeera.net/where/mideast/arab/syria/",
-      "rssUrl": "https://www.aljazeera.net/feed/rss/where/mideast/arab/syria/",
-      "strategy": "rss",
-      "enabled": true,
-      "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:00:52.540Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "timeout of 8000ms exceeded",
-      "consecutiveFailures": 2
-    },
-    {
       "name": "أخبار سوريا - العربية",
       "url": "https://www.alarabiya.net/arab-and-world/syria",
       "rssUrl": null,
       "strategy": "html",
-      "enabled": true,
+      "enabled": false,
       "encoding": "utf-8",
       "selectors": {
         "list": {
@@ -434,17 +576,18 @@
           "date": ".date-format"
         }
       },
-      "lastTestedAt": "2026-05-23T01:00:54.100Z",
+      "lastTestedAt": "2026-05-24T01:10:24.383Z",
       "lastTestStatus": "failed",
       "lastTestError": "Request failed with status code 403",
-      "consecutiveFailures": 2
+      "consecutiveFailures": 1,
+      "allowAiFallback": false
     },
     {
       "name": "عربي 21- سوريا",
       "url": "https://arabi21.com/stories/t/50055/0/%D8%B3%D9%88%D8%B1%D9%8A%D8%A9",
       "rssUrl": null,
       "strategy": "html",
-      "enabled": true,
+      "enabled": false,
       "encoding": "utf-8",
       "selectors": {
         "list": {
@@ -458,17 +601,18 @@
           "date": ".story-date"
         }
       },
-      "lastTestedAt": "2026-05-23T01:00:54.931Z",
+      "lastTestedAt": "2026-05-24T01:10:25.200Z",
       "lastTestStatus": "failed",
       "lastTestError": "read ECONNRESET",
-      "consecutiveFailures": 2
+      "consecutiveFailures": 2,
+      "allowAiFallback": false
     },
     {
       "name": "العربي الجديد - سوريا",
       "url": "https://www.alaraby.co.uk/news/syria",
       "rssUrl": null,
       "strategy": "html",
-      "enabled": true,
+      "enabled": false,
       "encoding": "utf-8",
       "selectors": {
         "list": {
@@ -482,17 +626,18 @@
           "date": ".pub-date"
         }
       },
-      "lastTestedAt": "2026-05-23T01:00:56.089Z",
+      "lastTestedAt": "2026-05-24T01:10:26.436Z",
       "lastTestStatus": "failed",
       "lastTestError": "read ECONNRESET",
-      "consecutiveFailures": 2
+      "consecutiveFailures": 1,
+      "allowAiFallback": false
     },
     {
       "name": "الحدث - سوريا",
       "url": "https://www.alhadath.net/syria",
       "rssUrl": null,
       "strategy": "html",
-      "enabled": true,
+      "enabled": false,
       "encoding": "utf-8",
       "selectors": {
         "list": {
@@ -506,138 +651,179 @@
           "date": ".date-info"
         }
       },
-      "lastTestedAt": "2026-05-23T01:00:57.187Z",
+      "lastTestedAt": "2026-05-24T01:10:27.516Z",
       "lastTestStatus": "failed",
       "lastTestError": "Request failed with status code 403",
-      "consecutiveFailures": 2
+      "consecutiveFailures": 1,
+      "allowAiFallback": false
     },
     {
       "name": "سيرياديز",
       "url": "https://syriandays.com/?",
-      "rssUrl": null,
+      "rssUrl": "https://syriandays.com/?page=rss",
       "strategy": "html",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
-          "container": "tr",
+          "container": "div",
           "title": "a",
           "link": "a"
         },
         "article": {
           "title": "h1",
-          "content": ".news_text",
-          "date": ".news_date"
+          "content": "article, .content, .post-content, .entry-content, main",
+          "date": "time, .date, .published"
         }
       },
-      "lastTestedAt": "2026-05-23T01:01:01.135Z",
+      "lastTestedAt": "2026-05-24T01:10:29.635Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
       "name": "الشرق - سوريا",
       "url": "https://asharq.com/locations/%D8%B3%D9%88%D8%B1%D9%8A%D8%A7/",
-      "rssUrl": null,
-      "strategy": "html",
+      "rssUrl": "https://asharq.com/locations/%D8%B3%D9%88%D8%B1%D9%8A%D8%A7/rss.xml",
+      "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
-          "container": ".card-container",
-          "title": "h4 a",
-          "link": "h4 a"
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
         },
         "article": {
-          "title": "h1",
-          "content": ".article-body",
-          "date": ".article-date"
+          "title": "main h1",
+          "content": "article",
+          "date": "time"
         }
       },
-      "lastTestedAt": "2026-05-23T01:01:02.629Z",
+      "lastTestedAt": "2026-05-24T01:10:31.377Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
       "name": "سوريا اونلاين",
       "url": "https://syria-online.net/",
-      "rssUrl": null,
-      "strategy": "wp_api",
+      "rssUrl": "https://syria-online.net/?feed=rss2",
+      "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:01:04.696Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "Request failed with status code 404",
-      "consecutiveFailures": 2
+      "lastTestedAt": "2026-05-25T20:18:21.893Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time[datetime]"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "السوري",
       "url": "https://alsori.net/",
-      "rssUrl": null,
-      "strategy": "wp_api",
+      "rssUrl": "https://alsori.net/?feed=rss2",
+      "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:01:07.811Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "Request failed with status code 404",
-      "consecutiveFailures": 2
+      "lastTestedAt": "2026-05-24T01:10:34.083Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2 a",
+          "link": "a"
+        },
+        "article": {
+          "title": ".post-title",
+          "content": ".entry-content",
+          "date": "time[datetime]"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "صحيفة الحرية",
       "url": "https://alhurriyah.sy/",
-      "rssUrl": null,
+      "rssUrl": "https://alhurriyah.sy/feed",
       "strategy": "wp_api",
       "enabled": true,
       "encoding": "utf-8",
-      "lastTestedAt": "2026-05-23T01:01:10.944Z",
+      "lastTestedAt": "2026-05-24T01:10:37.014Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "selectors": {
+        "list": {
+          "container": "article",
+          "title": "h2.entry-title a",
+          "link": "a"
+        },
+        "article": {
+          "title": "h1.entry-title",
+          "content": ".entry-content",
+          "date": "time"
+        }
+      },
+      "allowAiFallback": false
     },
     {
       "name": "الترا سوريا",
       "url": "https://ultrasyria.ultrasawt.com/",
-      "rssUrl": null,
-      "strategy": "html",
+      "rssUrl": "https://ultrasyria.ultrasawt.com/rss.xml",
+      "strategy": "rss",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
-          "container": ".views-row",
-          "title": "a",
+          "container": "article",
+          "title": "h2 a",
           "link": "a"
         },
         "article": {
-          "title": "h1",
+          "title": "main h1",
           "content": ".content-body",
-          "date": ".created-date"
+          "date": "time"
         }
       },
-      "lastTestedAt": "2026-05-23T01:01:12.616Z",
+      "lastTestedAt": "2026-05-24T01:10:38.432Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
-      "name": "العربي - سوريا",
+      "name": "أخبار سوريا",
       "url": "https://www.alaraby.com/news/arab-world/%D8%A3%D8%AE%D8%A8%D8%A7%D8%B1-%D8%B3%D9%88%D8%B1%D9%8A%D8%A7",
-      "rssUrl": null,
-      "strategy": "html",
+      "rssUrl": "https://www.alaraby.com/sitemap.xml",
+      "strategy": "sitemap",
       "enabled": true,
       "encoding": "utf-8",
       "selectors": {
         "list": {
-          "container": ".story-item",
-          "title": "a",
+          "container": "article",
+          "title": "h2 a",
           "link": "a"
         },
         "article": {
           "title": "h1",
-          "content": ".story-text",
-          "date": ".story-date"
+          "content": ".entry-content",
+          "date": "time"
         }
       },
-      "lastTestedAt": "2026-05-23T01:01:21.847Z",
-      "lastTestStatus": "failed",
-      "lastTestError": "timeout of 8000ms exceeded",
-      "consecutiveFailures": 2
+      "lastTestedAt": "2026-05-24T01:10:39.665Z",
+      "lastTestStatus": "success",
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     },
     {
       "name": "بوابة أخبار اليوم الإلكترونية",
@@ -658,9 +844,10 @@
           "date": "time"
         }
       },
-      "lastTestedAt": "2026-05-23T01:01:23.212Z",
+      "lastTestedAt": "2026-05-24T01:10:41.937Z",
       "lastTestStatus": "success",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "allowAiFallback": false
     }
   ]
 }

@@ -25,7 +25,8 @@ class Datastore {
         published_at TEXT,
         processed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
         wordpress_post_id INTEGER DEFAULT NULL,
-        status TEXT NOT NULL DEFAULT 'processed'
+        status TEXT NOT NULL DEFAULT 'processed',
+        image_url TEXT DEFAULT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_articles_url_hash ON processed_articles(url_hash);
       CREATE INDEX IF NOT EXISTS idx_articles_title_hash ON processed_articles(title_hash);
@@ -39,6 +40,11 @@ class Datastore {
       if (!hasContent) {
         this.db.exec('ALTER TABLE processed_articles ADD COLUMN content TEXT DEFAULT NULL');
         console.log('[DB] Migrated: added content column to processed_articles');
+      }
+      const hasImage = cols.some(c => c.name === 'image_url');
+      if (!hasImage) {
+        this.db.exec('ALTER TABLE processed_articles ADD COLUMN image_url TEXT DEFAULT NULL');
+        console.log('[DB] Migrated: added image_url column to processed_articles');
       }
     } catch (e) {
       // Ignore if table doesn't exist yet (first-run case)
@@ -233,6 +239,10 @@ class Datastore {
         updates.push("content = COALESCE(content, ?)");
         params.push(article.content);
       }
+      if (article.image_url) {
+        updates.push("image_url = COALESCE(image_url, ?)");
+        params.push(article.image_url);
+      }
       if (updates.length > 0) {
         params.push(existing.id);
         this.db.prepare(`UPDATE processed_articles SET ${updates.join(', ')} WHERE id = ?`).run(...params);
@@ -242,9 +252,9 @@ class Datastore {
 
     const stmt = this.db.prepare(`
       INSERT INTO processed_articles 
-        (title, url, normalized_url, url_hash, title_hash, content_hash, content, source_name, published_at, wordpress_post_id, status)
+        (title, url, normalized_url, url_hash, title_hash, content_hash, content, source_name, published_at, wordpress_post_id, status, image_url)
       VALUES 
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     try {
@@ -259,7 +269,8 @@ class Datastore {
         article.source_name,
         article.published_at || null,
         wordpressPostId,
-        wordpressPostId ? 'published' : 'processed'
+        wordpressPostId ? 'published' : 'processed',
+        article.image_url || null
       );
       return result.lastInsertRowid;
     } catch (err) {
@@ -369,15 +380,7 @@ class Datastore {
     return result.changes;
   }
 
-  /**
-   * Delete ALL articles
-   * @returns {number} Number of deleted articles
-   */
-  deleteAllArticles() {
-    const stmt = this.db.prepare('DELETE FROM processed_articles');
-    const result = stmt.run();
-    return result.changes;
-  }
+
 
   /**
    * Get detailed article statistics
@@ -395,6 +398,59 @@ class Datastore {
       FROM processed_articles GROUP BY source_name ORDER BY total DESC
     `).all();
     return { total, withContent, withoutContent: total - withContent, published, oldest, newest, bySource };
+  }
+
+  /**
+   * Retrieve recent article titles for AI deduplication comparison.
+   * Returns lightweight title-only records for n8n workflow consumption.
+   * @param {number} limit Max number of recent titles to return
+   * @returns {Array<{id: number, title: string, source_name: string, published_at: string}>}
+   */
+  getRecentTitles(limit = 50) {
+    return this.db.prepare(`
+      SELECT id, title, source_name, published_at 
+      FROM processed_articles 
+      WHERE status = 'published'
+      ORDER BY processed_at DESC 
+      LIMIT ?
+    `).all(limit);
+  }
+
+  /**
+   * Mark an article as duplicate-skipped by the AI dedup workflow.
+   * @param {number} id Article ID
+   * @param {string} matchedTitle The title it was matched against
+   * @returns {boolean} Success
+   */
+  markAsDuplicateSkipped(id, matchedTitle = null) {
+    const stmt = this.db.prepare(
+      "UPDATE processed_articles SET status = 'duplicate_skipped' WHERE id = ?"
+    );
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get detailed per-source statistics for the dashboard source control panel.
+   * Returns counts, date ranges, and health metrics per source.
+   * @returns {Array<Object>}
+   */
+  getPerSourceStats() {
+    return this.db.prepare(`
+      SELECT 
+        source_name,
+        COUNT(*) as total_articles,
+        SUM(CASE WHEN wordpress_post_id IS NOT NULL THEN 1 ELSE 0 END) as published_count,
+        SUM(CASE WHEN status = 'duplicate_skipped' THEN 1 ELSE 0 END) as duplicates_skipped,
+        SUM(CASE WHEN content IS NOT NULL AND content != '' THEN 1 ELSE 0 END) as with_content,
+        MIN(processed_at) as first_scraped,
+        MAX(processed_at) as last_scraped,
+        COUNT(CASE WHEN processed_at >= datetime('now', '-24 hours') THEN 1 END) as last_24h_count,
+        COUNT(CASE WHEN processed_at >= datetime('now', '-7 days') THEN 1 END) as last_7d_count
+      FROM processed_articles 
+      GROUP BY source_name 
+      ORDER BY last_scraped DESC
+    `).all();
   }
 
   close() {

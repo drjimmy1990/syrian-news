@@ -17,6 +17,30 @@ const parser = new Parser({
 });
 
 /**
+ * Retry wrapper with exponential backoff for resilient HTTP requests.
+ * @param {Function} fn Async function to retry
+ * @param {number} retries Max retry attempts (default: 1 = no retries)
+ * @param {number} baseDelay Base delay in ms between retries (default: 1000)
+ * @returns {Promise<any>}
+ */
+async function retryWithBackoff(fn, retries = 1, baseDelay = 1000) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        const delay = baseDelay * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+        console.log(`[Scraper Retry] Attempt ${attempt + 1}/${retries} failed: ${err.message}. Retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Probes a website base URL to detect WordPress REST API support.
  * @param {string} baseUrl The target website base URL
  * @returns {Promise<{supported: boolean, apiUrl: string|null}>}
@@ -66,9 +90,16 @@ async function fetchPageContent(url, encoding = 'utf-8', timeoutMs = 8000) {
     responseType: 'arraybuffer',
     timeout: timeoutMs,
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3'
+      'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1'
     }
   });
 
@@ -80,11 +111,13 @@ async function fetchPageContent(url, encoding = 'utf-8', timeoutMs = 8000) {
  */
 async function fetchWPAPI(source) {
   const url = source.url.replace(/\/$/, '');
-  const apiEndpoint = `${url}/wp-json/wp/v2/posts?per_page=10&_embed=1`;
+  const perPage = source.maxArticles || 10;
+  const timeout = source.scrapeTimeout || 10000;
+  const apiEndpoint = `${url}/wp-json/wp/v2/posts?per_page=${Math.min(perPage, 100)}&_embed=1`;
   const response = await axios.get(apiEndpoint, {
-    timeout: 8000, // slightly more generous timeout
+    timeout,
     headers: { 
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' 
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' 
     }
   });
 
@@ -119,12 +152,20 @@ async function fetchWPAPI(source) {
 
     const publishedAt = post.date_gmt ? new Date(post.date_gmt).toISOString() : new Date(post.date).toISOString();
 
+    let imageUrl = '';
+    if (post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0] && post._embedded['wp:featuredmedia'][0].source_url) {
+      imageUrl = post._embedded['wp:featuredmedia'][0].source_url;
+    } else if (post.yoast_head_json && post.yoast_head_json.og_image && post.yoast_head_json.og_image[0] && post.yoast_head_json.og_image[0].url) {
+      imageUrl = post.yoast_head_json.og_image[0].url;
+    }
+
     return {
       title: title.trim(),
       content: content.trim(),
       url: post.link,
       source_name: source.name,
-      published_at: publishedAt
+      published_at: publishedAt,
+      image_url: imageUrl
     };
   });
 }
@@ -133,7 +174,8 @@ async function fetchWPAPI(source) {
  * Fetches latest posts by parsing RSS XML feeds.
  */
 async function fetchRSS(source) {
-  const feedXml = await fetchPageContent(source.rssUrl, source.encoding || 'utf-8');
+  const timeout = source.scrapeTimeout || 8000;
+  const feedXml = await fetchPageContent(source.rssUrl, source.encoding || 'utf-8', timeout);
   const feed = await parser.parseString(feedXml);
 
   return feed.items.map(item => {
@@ -142,21 +184,60 @@ async function fetchRSS(source) {
     const url = String(item.link || item.guid || '');
     const publishedAt = item.isoDate || (item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString());
 
+    let imageUrl = '';
+    if (item.enclosure && item.enclosure.url && item.enclosure.type && item.enclosure.type.startsWith('image/')) {
+      imageUrl = item.enclosure.url;
+    } else {
+      const match = content.match(/<img[^>]+src="([^">]+)"/);
+      if (match) imageUrl = match[1];
+    }
+
     return {
       title: title.trim(),
       content: content.trim(),
       url: url.trim(),
       source_name: source.name,
-      published_at: publishedAt
+      published_at: publishedAt,
+      image_url: imageUrl
     };
   });
+}
+
+/**
+ * Fetches latest posts by parsing XML Sitemaps.
+ */
+async function fetchSitemap(source) {
+  const targetUrl = source.sitemapUrl || source.rssUrl;
+  if (!targetUrl) throw new Error("Missing sitemap URL. Please provide it in the RSS field.");
+  const sitemapXml = await fetchPageContent(targetUrl, source.encoding || 'utf-8');
+  const $ = cheerio.load(sitemapXml, { xmlMode: true });
+  const articles = [];
+  
+  $('url').each((i, element) => {
+    if (i >= 20) return; // Limit to newest items
+    const loc = $(element).find('loc').text();
+    const lastmod = $(element).find('lastmod').text();
+    
+    if (loc && !loc.endsWith('.xml')) {
+      articles.push({
+        title: loc.split('/').pop().replace(/-/g, ' ').replace(/\.[^/.]+$/, "") || 'Article from Sitemap',
+        content: '', 
+        url: loc.trim(),
+        source_name: source.name,
+        published_at: lastmod ? new Date(lastmod).toISOString() : new Date().toISOString()
+      });
+    }
+  });
+  
+  return articles;
 }
 
 /**
  * Fetches latest posts using a raw HTML crawler with Cheerio selectors.
  */
 async function fetchHTML(source) {
-  const html = await fetchPageContent(source.url, source.encoding || 'utf-8');
+  const timeout = source.scrapeTimeout || 8000;
+  const html = await fetchPageContent(source.url, source.encoding || 'utf-8', timeout);
   const $ = cheerio.load(html);
   const articles = [];
 
@@ -190,12 +271,19 @@ async function fetchHTML(source) {
       link = `${base.protocol}//${base.host}${link.startsWith('/') ? '' : '/'}${link}`;
     }
 
+    let imageUrl = $(element).find('img').first().attr('src') || '';
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      const base = new URL(source.url);
+      imageUrl = `${base.protocol}//${base.host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+
     if (title && link) {
       articles.push({
         title: title,
         url: link,
         source_name: source.name,
-        published_at: new Date().toISOString() // Fallback to current time during list scrape
+        published_at: new Date().toISOString(), // Fallback to current time during list scrape
+        image_url: imageUrl
       });
     }
   });
@@ -235,7 +323,17 @@ async function extractFullArticleContent(url, sourceConfig) {
       }
     }
 
-    return { title, content, published_at: publishedAt };
+    let imageUrl = $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content') || '';
+    if (!imageUrl) {
+      const firstImg = $('article img').first().attr('src') || $('.content img').first().attr('src') || $('img').first().attr('src');
+      if (firstImg) imageUrl = firstImg;
+    }
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      const base = new URL(url);
+      imageUrl = `${base.protocol}//${base.host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+
+    return { title, content, published_at: publishedAt, image_url: imageUrl };
   } catch (error) {
     console.error(`Failed to extract full content for ${url}:`, error.message);
     return null;
@@ -254,16 +352,24 @@ async function fetchArticles(sources, maxArticles = 3, sinceDate = null) {
   const filterDateMs = sinceDate ? new Date(sinceDate).getTime() : null;
 
   for (const source of sources) {
-    console.log(`[Scraper] Processing source: ${source.name} using strategy: ${source.strategy}`);
+    const retries = source.retryCount || 0;
+    const crawlDepth = source.crawlDepth || 'list+article';
+    console.log(`[Scraper] Processing source: ${source.name} | strategy: ${source.strategy} | depth: ${crawlDepth} | timeout: ${source.scrapeTimeout || 8000}ms | retries: ${retries}`);
     try {
       let articles = [];
-      if (source.strategy === 'wp_api') {
-        articles = await fetchWPAPI(source);
-      } else if (source.strategy === 'rss') {
-        articles = await fetchRSS(source);
-      } else if (source.strategy === 'html') {
-        articles = await fetchHTML(source);
-      }
+      const fetchFn = async () => {
+        if (source.strategy === 'wp_api') {
+          return await fetchWPAPI(source);
+        } else if (source.strategy === 'rss') {
+          return await fetchRSS(source);
+        } else if (source.strategy === 'sitemap') {
+          return await fetchSitemap(source);
+        } else if (source.strategy === 'html') {
+          return await fetchHTML(source);
+        }
+        return [];
+      };
+      articles = await retryWithBackoff(fetchFn, retries);
 
       // Filter articles by sinceDate if provided
       if (filterDateMs) {
@@ -290,20 +396,26 @@ async function fetchArticles(sources, maxArticles = 3, sinceDate = null) {
       console.log(`[Scraper] Applying crawl limit: fetching top ${sourceLimit} articles for ${source.name}`);
       articles = articles.slice(0, sourceLimit);
 
-      // Populate full article content for RSS or HTML list-only discoveries if needed
+      // Populate full article content based on crawlDepth setting
+      // 'list' = titles/links only (skip full-article fetching for speed)
+      // 'list+article' = also fetch full article content from each post page
       for (let article of articles) {
-        // If content is empty or acts as a short summary snippet, scrape the full post page
-        if ((!article.content || article.content.length < 300) && source.selectors && source.selectors.article) {
-          console.log(`[Scraper] Content too short (${article.content ? article.content.length : 0} chars). Fetching full content from: ${article.url}`);
-          const fullInfo = await extractFullArticleContent(article.url, source);
-          if (fullInfo) {
-            if (fullInfo.content) {
-              article.content = fullInfo.content;
-            }
-            if (fullInfo.published_at && fullInfo.published_at !== new Date().toISOString()) {
-              article.published_at = fullInfo.published_at;
+        if (crawlDepth === 'list+article') {
+          // If content is empty or acts as a short summary snippet, scrape the full post page
+          if ((!article.content || article.content.length < 300) && source.selectors && source.selectors.article) {
+            console.log(`[Scraper] Content too short (${article.content ? article.content.length : 0} chars). Fetching full content from: ${article.url}`);
+            const fullInfo = await extractFullArticleContent(article.url, source);
+            if (fullInfo) {
+              if (fullInfo.content) {
+                article.content = fullInfo.content;
+              }
+              if (fullInfo.published_at && fullInfo.published_at !== new Date().toISOString()) {
+                article.published_at = fullInfo.published_at;
+              }
             }
           }
+        } else {
+          console.log(`[Scraper] crawlDepth='list' — skipping full content fetch for: ${article.title.slice(0, 50)}...`);
         }
         
         // Ensure some baseline content exists if it was totally missing
@@ -463,72 +575,78 @@ async function autoDetectStrategy(baseUrl) {
   // ===================================================================
   // PHASE 3: RSS discovery (link tags + common path guesses)
   // ===================================================================
-  let discoveredRssUrl = null;
+  let potentialRssUrls = [];
 
   // 3a. Scan <link> tags for RSS/Atom feeds
   try {
     $('link[type="application/rss+xml"], link[type="application/atom+xml"], link[type="text/xml"]').each((i, el) => {
       const href = $(el).attr('href');
-      if (href && !discoveredRssUrl) discoveredRssUrl = href;
+      if (href) {
+        let fullHref = href;
+        if (!href.startsWith('http')) {
+          const parsed = new URL(url);
+          fullHref = `${parsed.protocol}//${parsed.host}${href.startsWith('/') ? '' : '/'}${href}`;
+        }
+        if (!potentialRssUrls.includes(fullHref)) potentialRssUrls.push(fullHref);
+      }
     });
-    if (discoveredRssUrl && !discoveredRssUrl.startsWith('http')) {
-      const parsed = new URL(url);
-      discoveredRssUrl = `${parsed.protocol}//${parsed.host}${discoveredRssUrl.startsWith('/') ? '' : '/'}${discoveredRssUrl}`;
-    }
   } catch {}
 
-  // 3b. Scan page body for RSS icon/links (e.g. <a href="/rss"> with RSS icon or text)
-  if (!discoveredRssUrl) {
-    try {
-      $('a[href*="rss"], a[href*="feed"], a[href*="atom"], a[href$=".xml"]').each((i, el) => {
-        const href = $(el).attr('href');
-        if (href && !discoveredRssUrl && !href.includes('feedback') && !href.includes('feedb')) {
-          if (href.startsWith('http')) {
-            discoveredRssUrl = href;
-          } else {
-            const parsed = new URL(url);
-            discoveredRssUrl = `${parsed.protocol}//${parsed.host}${href.startsWith('/') ? '' : '/'}${href}`;
-          }
+  // 3b. Scan page body for RSS icon/links (e.g. <a href="/rss">)
+  try {
+    $('a[href*="rss"], a[href*="feed"], a[href*="atom"], a[href$=".xml"]').each((i, el) => {
+      const href = $(el).attr('href');
+      if (href && !href.includes('feedback') && !href.includes('feedb')) {
+        let fullHref = href;
+        if (!href.startsWith('http')) {
+          const parsed = new URL(url);
+          fullHref = `${parsed.protocol}//${parsed.host}${href.startsWith('/') ? '' : '/'}${href}`;
         }
-      });
-    } catch {}
-  }
+        if (!potentialRssUrls.includes(fullHref)) potentialRssUrls.push(fullHref);
+      }
+    });
+  } catch {}
 
   // 3c. Common feed path guesses (expanded list)
-  if (!discoveredRssUrl) {
-    const feedPaths = [
-      '/feed', '/rss', '/rss.xml', '/feed/', '/atom.xml',
-      '/index.xml', '/feeds/posts/default', // Blogger
-      '/?feed=rss2', '/?feed=atom',          // WordPress alt
-      '/blog/feed', '/news/feed', '/ar/feed', '/en/feed',
-      '/feed/rss', '/rss/feed.xml', '/feed.xml'
-    ];
-    for (const p of feedPaths) {
-      try {
-        const feedUrl = `${url}${p}`;
-        const res = await axios.get(feedUrl, {
-          timeout: 5000,
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          maxRedirects: 3
-        });
-        const data = typeof res.data === 'string' ? res.data : '';
-        if (res.status === 200 && (data.includes('<rss') || data.includes('<feed') || data.includes('<?xml'))) {
-          discoveredRssUrl = feedUrl;
-          console.log(`[Scraper Detect] ✓ Found feed at guessed path: ${p}`);
-          break;
-        }
-      } catch {}
-    }
+  const feedPaths = [
+    '/feed', '/rss', '/rss.xml', '/feed/', '/atom.xml',
+    '/index.xml', '/feeds/posts/default', // Blogger
+    '/?feed=rss2', '/?feed=atom',          // WordPress alt
+    '/blog/feed', '/news/feed', '/ar/feed', '/en/feed',
+    '/feed/rss', '/rss/feed.xml', '/feed.xml'
+  ];
+  for (const p of feedPaths) {
+    const feedUrl = `${url}${p}`;
+    if (!potentialRssUrls.includes(feedUrl)) potentialRssUrls.push(feedUrl);
   }
 
-  // 3d. Validate RSS by actually parsing it AND checking item quality
-  if (discoveredRssUrl) {
+  // 3d. Validate RSS URLs one by one by actually parsing them
+  for (const testUrl of potentialRssUrls) {
     try {
-      console.log(`[Scraper Detect] Testing discovered RSS: ${discoveredRssUrl}`);
-      const feedXml = await fetchPageContent(discoveredRssUrl, 'utf-8', 10000);
+      console.log(`[Scraper Detect] Testing potential RSS: ${testUrl}`);
+      
+      const rssRes = await axios.get(testUrl, {
+        timeout: 8000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*'
+        },
+        maxRedirects: 5
+      });
+      
+      const contentType = rssRes.headers['content-type'] || '';
+      const data = typeof rssRes.data === 'string' ? rssRes.data.trim() : JSON.stringify(rssRes.data);
+      
+      if (!contentType.includes('xml') && !data.startsWith('<?xml') && !data.includes('<rss') && !data.includes('<feed')) {
+        continue; // Try next URL
+      }
+      
+      const discoveredRssUrl = rssRes.request.res.responseUrl || testUrl;
+      const feedXml = data;
       const feed = await parser.parseString(feedXml);
+      
       if (feed.items && feed.items.length > 0) {
-        // Validate that items actually have title + link (not empty stubs)
+        // Validate that items actually have title + link
         const validItems = feed.items.filter(item => {
           const hasTitle = item.title && item.title.trim().length > 3;
           const hasLink = item.link || item.guid;
@@ -536,7 +654,6 @@ async function autoDetectStrategy(baseUrl) {
         });
 
         if (validItems.length > 0) {
-          // Check if items have content (content:encoded or description)
           const itemsWithContent = validItems.filter(item =>
             (item.contentEncoded && item.contentEncoded.trim().length > 50) ||
             (item.content && item.content.trim().length > 50) ||
@@ -547,7 +664,7 @@ async function autoDetectStrategy(baseUrl) {
             ? `${itemsWithContent.length}/${validItems.length} items have inline content`
             : 'items have no inline content — full article will be fetched from page';
 
-          console.log(`[Scraper Detect] ✓ RSS validated — ${validItems.length} valid items (${contentNote})`);
+          console.log(`[Scraper Detect] ✓ RSS validated at ${discoveredRssUrl} — ${validItems.length} valid items (${contentNote})`);
 
           // Try to discover article-page selectors from the first item's link
           const articleSelectors = await discoverArticleSelectors(validItems[0].link || validItems[0].guid, url);
@@ -567,12 +684,69 @@ async function autoDetectStrategy(baseUrl) {
             }
           };
         }
-        console.log(`[Scraper Detect] RSS has ${feed.items.length} items but none have valid title+link — continuing`);
-      } else {
-        console.log(`[Scraper Detect] RSS feed parsed but contains 0 items — continuing analysis`);
       }
     } catch (e) {
-      console.log(`[Scraper Detect] RSS validation failed: ${e.message} — continuing analysis`);
+      console.log(`[Scraper Detect] RSS validation failed for ${testUrl}: ${e.message}`);
+    }
+  }
+
+  // ===================================================================
+  // PHASE 3.5: Sitemap discovery (for sites without RSS or WP API)
+  // ===================================================================
+  let discoveredSitemapUrl = null;
+  const sitemapPaths = ['/sitemap.xml', '/sitemap_index.xml', '/sitemap-news.xml'];
+  for (const p of sitemapPaths) {
+    try {
+      const parsed = new URL(url);
+      const sitemapUrl = `${parsed.protocol}//${parsed.host}${p}`;
+      const res = await axios.get(sitemapUrl, {
+        timeout: 5000,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        maxRedirects: 3
+      });
+      const data = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+      if (res.status === 200 && (data.includes('<urlset') || data.includes('<sitemapindex'))) {
+        discoveredSitemapUrl = res.request.res.responseUrl || sitemapUrl;
+        console.log(`[Scraper Detect] ✓ Found sitemap at: ${discoveredSitemapUrl}`);
+        break;
+      }
+    } catch {}
+  }
+
+  if (discoveredSitemapUrl) {
+    try {
+      console.log(`[Scraper Detect] Testing discovered sitemap: ${discoveredSitemapUrl}`);
+      const sitemapRes = await axios.get(discoveredSitemapUrl, { 
+        timeout: 10000,
+        responseType: 'text' // Force axios to not parse it into an object automatically
+      });
+      let data = typeof sitemapRes.data === 'string' ? sitemapRes.data : String(sitemapRes.data);
+      if (data && (data.includes('<loc>') || data.includes('<url>'))) {
+        // Find first <loc> element value
+        const locMatch = data.match(/<loc>(.*?)<\/loc>/);
+        let sampleLink = locMatch ? locMatch[1].trim() : null;
+        
+        // If it's a sitemap index, we might just get another sitemap URL. We'll handle this in the fetch phase.
+        const articleSelectors = sampleLink && !sampleLink.endsWith('.xml') 
+          ? await discoverArticleSelectors(sampleLink, url) 
+          : {};
+
+        return {
+          success: true,
+          strategy: 'sitemap',
+          name: siteTitle,
+          rssUrl: discoveredSitemapUrl,
+          encoding: 'utf-8',
+          selectors: articleSelectors,
+          validationResult: {
+            articlesFound: (data.match(/<loc>/g) || []).length,
+            validated: true,
+            sampleLink: sampleLink
+          }
+        };
+      }
+    } catch (e) {
+      console.log(`[Scraper Detect] Sitemap validation failed: ${e.message} — continuing analysis`);
     }
   }
 
@@ -599,7 +773,7 @@ async function autoDetectStrategy(baseUrl) {
       success: true,
       strategy: 'html',
       name: siteTitle,
-      rssUrl: discoveredRssUrl || null,
+      rssUrl: null,
       encoding: 'utf-8',
       selectors: articleSelectors.list ? articleSelectors : { list: listSelectors, ...articleSelectors },
       validationResult
@@ -616,7 +790,7 @@ async function autoDetectStrategy(baseUrl) {
     success: true,
     strategy: 'html',
     name: siteTitle,
-    rssUrl: discoveredRssUrl || null,
+    rssUrl: null,
     encoding: 'utf-8',
     selectors: fallbackSelectors,
     validationResult: { articlesFound: 0, note: 'لم يتم اكتشاف نمط مقالات واضح — قد تحتاج لضبط المحددات يدوياً' }
