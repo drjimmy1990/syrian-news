@@ -303,53 +303,54 @@ In your n8n workflow, the last 3 nodes should be:
 
 ### Flow Diagram
 ```
-[Build WP Payload] → [📷 Upload Image (Code)] → [📤 Create Post (Code)]
+[Build WP Payload] → [📷 Upload Image (Code)] → [📤 Create Post (HTTP Request)]
 ```
 
 ### Node: 📷 Upload Image (Code Node)
 Use the JavaScript code from the "Upload Image" section above.
 
-### Node: 📤 Create Post (Code Node)
+### Node: 📤 Create Post (Code Node — NOT HTTP Request!)
 
-> ⚠️ **Why Code node?** HTML content contains quotes (`"`) and special characters that **break JSON** in n8n's HTTP Request node. Using a Code node with `JSON.stringify()` handles escaping automatically.
+> ⚠️ **Why Code instead of HTTP Request?** Because the article HTML content contains `"` quotes and special characters that break n8n's JSON expression parser. A Code node uses `JSON.stringify()` which handles this automatically.
 
+| Setting | Value |
+|---------|-------|
+| Type | `Code` |
+| Language | `JavaScript` |
+
+**JavaScript Code:**
 ```javascript
 const article = $input.first().json;
 
-const AUTH = 'Basic ' + Buffer.from('admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr').toString('base64');
-
-const postData = {
+const postBody = {
   title: article.postTitle,
   content: article.postContent,
-  status: article.postStatus || 'draft',
+  status: article.postStatus,
   categories: [article.categoryId],
+  featured_media: article.featuredMediaId || 0
 };
-
-// Add featured image if we uploaded one
-if (article.featuredMediaId && article.featuredMediaId > 0) {
-  postData.featured_media = article.featuredMediaId;
-}
 
 const response = await this.helpers.httpRequest({
   method: 'POST',
   url: `${article.wpUrl}/wp-json/wp/v2/posts`,
   headers: {
-    'Authorization': AUTH,
     'Content-Type': 'application/json',
+    'Authorization': 'Basic ' + Buffer.from('admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr').toString('base64'),
   },
-  body: JSON.stringify(postData),
+  body: postBody,
 });
 
 return [{
   json: {
-    ...article,
+    articleId: article.articleId,
     wpPostId: response.id,
-    wpPostLink: response.link,
+    wpPostUrl: response.link,
+    aggregatorUrl: article.aggregatorUrl,
   }
 }];
 ```
 
-**Response**: `wpPostId` contains the WordPress post ID, `wpPostLink` has the public URL.
+**Response**: WordPress returns the created post. `response.id` is the post ID, `response.link` is the URL.
 
 ---
 
