@@ -492,42 +492,77 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
 > }
 > ```
 
-### Node 14: Publish to WordPress (HTTP Request)
+### Node 14: Publish to WordPress (Code Node)
 - **Name**: `📤 Publish to WordPress`
-- **Type**: `HTTP Request`
+- **Type**: `Code` *(NOT HTTP Request — because HTML in content breaks JSON in the HTTP node)*
 - **Parameters**:
-  - **Method**: `POST`
-  - **URL**: `={{ $json.wpUrl }}/wp-json/wp/v2/posts`
-  - **Authentication**: `Basic Auth`
-  - **User**: `admin`
-  - **Password**: *(your Application Password)*
-  - **Body Content Type**: `JSON`
-  - **JSON Body**:
-    ```json
-    {
-      "title": "={{ $json.postTitle }}",
-      "content": "={{ $json.postContent }}",
-      "status": "={{ $json.postStatus }}",
-      "categories": [{{ $json.categoryId }}],
-      "featured_media": {{ $json.featuredMediaId }}
-    }
-    ```
-- **Purpose**: Creates the post on WordPress with the correct category and featured image.
+  - **Language**: `JavaScript`
+  - **JS Code**:
+    ```javascript
+    const article = $input.first().json;
 
-### Node 14: Update Aggregator DB (HTTP Request)
-- **Name**: `Update Aggregator DB`
-- **Type**: `HTTP Request`
-- **Parameters**:
-  - **Method**: `PUT`
-  - **URL**: `={{ $('⚙️ Configuration').first().json.aggregatorUrl }}/api/articles/{{ $json.articleId }}`
-  - **Body**: `JSON`
-  - **JSON Body**:
-    ```json
-    {
-      "status": "published",
-      "wordpress_post_id": "={{ $json.id }}",
-      "content": "={{ $json.postPayload.content }}"
+    const AUTH = 'Basic ' + Buffer.from('admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr').toString('base64');
+
+    const postData = {
+      title: article.postTitle,
+      content: article.postContent,
+      status: article.postStatus || 'draft',
+      categories: [article.categoryId],
+    };
+
+    // Add featured image if uploaded
+    if (article.featuredMediaId && article.featuredMediaId > 0) {
+      postData.featured_media = article.featuredMediaId;
     }
+
+    const response = await this.helpers.httpRequest({
+      method: 'POST',
+      url: `${article.wpUrl}/wp-json/wp/v2/posts`,
+      headers: {
+        'Authorization': AUTH,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(postData),
+    });
+
+    return [{
+      json: {
+        ...article,
+        wpPostId: response.id,
+        wpPostLink: response.link,
+      }
+    }];
+    ```
+- **Purpose**: Creates the post on WordPress. Uses `JSON.stringify()` to properly handle HTML content with quotes and special characters.
+
+### Node 15: Update Aggregator DB (HTTP Request)
+- **Name**: `Update Aggregator DB`
+- **Type**: `Code`
+- **Parameters**:
+  - **Language**: `JavaScript`
+  - **JS Code**:
+    ```javascript
+    const article = $input.first().json;
+    const config = $('⚙️ Configuration').first().json;
+
+    const response = await this.helpers.httpRequest({
+      method: 'PUT',
+      url: `${config.aggregatorUrl}/api/articles/${article.articleId}`,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'published',
+        wordpress_post_id: String(article.wpPostId),
+      }),
+    });
+
+    return [{
+      json: {
+        articleId: article.articleId,
+        wpPostId: article.wpPostId,
+        wpPostLink: article.wpPostLink,
+        updated: true,
+      }
+    }];
     ```
 - **Purpose**: Tells the aggregator database that this article has been successfully published, logging the WordPress Post ID and marking it as `'published'` so it won't be processed again.
 

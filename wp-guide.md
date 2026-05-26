@@ -303,33 +303,53 @@ In your n8n workflow, the last 3 nodes should be:
 
 ### Flow Diagram
 ```
-[Build WP Payload] → [📷 Upload Image (Code)] → [📤 Create Post (HTTP Request)]
+[Build WP Payload] → [📷 Upload Image (Code)] → [📤 Create Post (Code)]
 ```
 
 ### Node: 📷 Upload Image (Code Node)
 Use the JavaScript code from the "Upload Image" section above.
 
-### Node: 📤 Create Post (HTTP Request)
+### Node: 📤 Create Post (Code Node)
 
-| Setting | Value |
-|---------|-------|
-| Method | `POST` |
-| URL | `={{ $json.wpUrl }}/wp-json/wp/v2/posts` |
-| Authentication | Basic Auth (WordPress credential) |
-| Body Content Type | JSON |
+> ⚠️ **Why Code node?** HTML content contains quotes (`"`) and special characters that **break JSON** in n8n's HTTP Request node. Using a Code node with `JSON.stringify()` handles escaping automatically.
 
-**JSON Body (use expressions):**
-```json
-{
-  "title": "={{ $json.postTitle }}",
-  "content": "={{ $json.postContent }}",
-  "status": "={{ $json.postStatus }}",
-  "categories": [{{ $json.categoryId }}],
-  "featured_media": {{ $json.featuredMediaId }}
+```javascript
+const article = $input.first().json;
+
+const AUTH = 'Basic ' + Buffer.from('admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr').toString('base64');
+
+const postData = {
+  title: article.postTitle,
+  content: article.postContent,
+  status: article.postStatus || 'draft',
+  categories: [article.categoryId],
+};
+
+// Add featured image if we uploaded one
+if (article.featuredMediaId && article.featuredMediaId > 0) {
+  postData.featured_media = article.featuredMediaId;
 }
+
+const response = await this.helpers.httpRequest({
+  method: 'POST',
+  url: `${article.wpUrl}/wp-json/wp/v2/posts`,
+  headers: {
+    'Authorization': AUTH,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(postData),
+});
+
+return [{
+  json: {
+    ...article,
+    wpPostId: response.id,
+    wpPostLink: response.link,
+  }
+}];
 ```
 
-**Response**: WordPress returns the created post including its `id`. Use this to update the aggregator database.
+**Response**: `wpPostId` contains the WordPress post ID, `wpPostLink` has the public URL.
 
 ---
 
