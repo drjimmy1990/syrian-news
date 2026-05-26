@@ -135,21 +135,24 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
       a.content && 
       a.content.trim().length > 50 && 
       !a.wordpress_post_id &&
-      a.status !== 'duplicate_skipped'
+      a.status !== 'duplicate_skipped' &&
+      new Date(a.published_at) > new Date(Date.now() - 60 * 60 * 1000) // Only articles from the last 1 hour
     );
 
     return newArticles.map(article => ({
       json: {
         id: article.id,
         title: article.title,
+        content: article.content,
         source_name: article.source_name,
         url: article.url,
         image_url: article.image_url,
+        published_at: article.published_at,
         existingTitles: existingTitles.join('\n')
       }
     }));
     ```
-- **Purpose**: Matches each new article with the list of already-published titles, outputting them as separate items for the AI Dedup check.
+- **Purpose**: Filters out old articles (older than 1 hour), empty content, and already-handled entries. Then matches each new article with the list of already-published titles, outputting them as separate items for the AI Dedup check.
 
 ### Node 6: 🤖 AI Duplicate Check (OpenAI or Gemini)
 - **Name**: `🤖 AI Duplicate Check`

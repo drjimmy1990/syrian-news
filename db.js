@@ -410,6 +410,7 @@ class Datastore {
     return this.db.prepare(`
       SELECT id, title, source_name, published_at 
       FROM processed_articles 
+      WHERE status = 'published' OR wordpress_post_id IS NOT NULL
       ORDER BY processed_at DESC 
       LIMIT ?
     `).all(limit);
