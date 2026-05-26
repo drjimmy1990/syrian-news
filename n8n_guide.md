@@ -381,29 +381,27 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     const article = $input.first().json;
     const config = $('⚙️ Configuration').first().json;
 
-    // Category slug mapping (Arabic name → WordPress slug)
-    // ⚠️ You MUST create these categories in WordPress first!
-    // Go to: WordPress → Posts → Categories → Add each one
+    // Category ID mapping (Arabic name → WordPress category ID)
+    // These are the actual IDs from souree.net
     const categoryMap = {
-      'سياسة': 'politics',
-      'عسكري وأمني': 'military-security',
-      'اقتصاد': 'economy',
-      'مجتمع': 'society',
-      'رياضة': 'sports',
-      'ثقافة وفن': 'culture-art',
-      'تكنولوجيا': 'technology',
-      'دولي': 'international',
-      'محلي': 'local'
+      'سياسة': 21,
+      'عسكري وأمني': 102,
+      'اقتصاد': 24,
+      'مجتمع': 26,
+      'رياضة': 32,
+      'ثقافة وفن': 28,
+      'تكنولوجيا': 35,
+      'دولي': 71,
+      'محلي': 20
     };
 
-    const categorySlug = categoryMap[article.category] || 'local';
+    const categoryId = categoryMap[article.category] || 20;
 
-    // RTL Blockquote style for WordPress
+    // Source attribution (no link, just the name)
     const attribution = `
-    <blockquote style="direction: rtl; text-align: right; border-right: 4px solid #3b82f6; padding: 12px; margin: 20px 0; background: #f8f9fa; font-size: 14px;">
-      <strong>المصدر:</strong> ${article.source_name}<br>
-      <a href="${article.url}" target="_blank" rel="noopener noreferrer">الرابط الأصلي للمصدر</a>
-    </blockquote>`;
+    <p style="direction: rtl; text-align: right; color: #6b7280; font-size: 13px; margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+      المصدر: ${article.source_name}
+    </p>`;
 
     // Only add the image HTML if an image_url actually exists
     const imageHtml = article.image_url 
@@ -421,38 +419,100 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
         articleId: article.articleId,
         wpUrl: config.wpUrl,
         wpPostStatus: config.wpPostStatus,
-        categorySlug: categorySlug,
+        categoryId: categoryId,
         categoryArabic: article.category,
-        postPayload: {
-          title: article.rewrittenTitle,
-          content: fullContent,
-          status: config.wpPostStatus,
-          categories: categorySlug,
-          meta: {
-            source_url: article.url,
-            source_name: article.source_name
-          }
-        }
+        image_url: article.image_url,
+        aggregatorUrl: article.aggregatorUrl,
+        postTitle: article.rewrittenTitle,
+        postContent: fullContent,
+        postStatus: config.wpPostStatus,
+        source_url: article.url,
+        source_name: article.source_name
       }
     }];
     ```
-- **Purpose**: Assembles the post title, clean HTML content, category, and source attribution for WordPress publishing.
+- **Purpose**: Assembles the post title, clean HTML content, category ID, and source attribution for WordPress publishing.
 
-### Node 13: Publish to WordPress (WordPress Node)
-- **Name**: `📤 Publish to WordPress`
-- **Type**: `WordPress` (n8n-nodes-base.wordpress)
+### Node 13: Upload Featured Image (HTTP Request) — *Optional but recommended*
+- **Name**: `📷 Upload Featured Image`
+- **Type**: `HTTP Request`
+- **Skip this node if**: `={{ !$json.image_url }}` *(Skip when there's no image)*
 - **Parameters**:
-  - **Resource**: `Post`
-  - **Operation**: `Create`
-  - **Title**: `={{ $json.postPayload.title }}`
-  - **Content**: `={{ $json.postPayload.content }}`
-  - **Status**: `={{ $json.wpPostStatus }}`
-- **Credentials**:
-  - **WordPress API**: Click **Create New Credentials**. Enter:
-    - **WordPress URL**: e.g., `https://your-wordpress-site.com`
-    - **Username**: Your WordPress admin username
-    - **Application Password**: The 24-character Application Password generated under WordPress ➔ Users ➔ Profile.
-- **Purpose**: Creates the draft or live post on your WordPress website.
+  - **Method**: `POST`
+  - **URL**: `={{ $json.wpUrl }}/wp-json/wp/v2/media`
+  - **Authentication**: `Basic Auth`
+  - **User**: `admin`
+  - **Password**: *(your Application Password)*
+  - **Send Headers**: Yes
+    - `Content-Disposition` = `attachment; filename="news-image.jpg"`
+    - `Content-Type` = `image/jpeg`
+  - **Body Content Type**: `Raw`
+  - **Body**: `={{ $json.image_url }}`
+  - ⚠️ **NOTE**: In n8n, it's easier to use a **Code node** instead. See alternative below.
+- **Purpose**: Uploads the article image to WordPress Media Library and returns its `id`.
+
+> **⚠️ Easier Alternative for Node 13**: Use a **Code node** with this JavaScript:
+> ```javascript
+> const article = $input.first().json;
+> 
+> // If no image, skip upload and pass through
+> if (!article.image_url) {
+>   return [{ json: { ...article, featuredMediaId: 0 } }];
+> }
+> 
+> try {
+>   // Download image from source
+>   const imageResponse = await this.helpers.httpRequest({
+>     method: 'GET',
+>     url: article.image_url,
+>     encoding: 'arraybuffer',
+>     returnFullResponse: true,
+>   });
+> 
+>   // Extract filename from URL
+>   const urlParts = article.image_url.split('/');
+>   const filename = urlParts[urlParts.length - 1].split('?')[0] || 'news-image.jpg';
+> 
+>   // Upload to WordPress
+>   const wpResponse = await this.helpers.httpRequest({
+>     method: 'POST',
+>     url: `${article.wpUrl}/wp-json/wp/v2/media`,
+>     headers: {
+>       'Content-Disposition': `attachment; filename="${filename}"`,
+>       'Content-Type': imageResponse.headers['content-type'] || 'image/jpeg',
+>       'Authorization': 'Basic ' + Buffer.from('admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr').toString('base64'),
+>     },
+>     body: Buffer.from(imageResponse.body),
+>   });
+> 
+>   return [{ json: { ...article, featuredMediaId: wpResponse.id } }];
+> } catch (e) {
+>   // If image upload fails, continue without featured image
+>   return [{ json: { ...article, featuredMediaId: 0 } }];
+> }
+> ```
+
+### Node 14: Publish to WordPress (HTTP Request)
+- **Name**: `📤 Publish to WordPress`
+- **Type**: `HTTP Request`
+- **Parameters**:
+  - **Method**: `POST`
+  - **URL**: `={{ $json.wpUrl }}/wp-json/wp/v2/posts`
+  - **Authentication**: `Basic Auth`
+  - **User**: `admin`
+  - **Password**: *(your Application Password)*
+  - **Body Content Type**: `JSON`
+  - **JSON Body**:
+    ```json
+    {
+      "title": "={{ $json.postTitle }}",
+      "content": "={{ $json.postContent }}",
+      "status": "={{ $json.postStatus }}",
+      "categories": [{{ $json.categoryId }}],
+      "featured_media": {{ $json.featuredMediaId }}
+    }
+    ```
+- **Purpose**: Creates the post on WordPress with the correct category and featured image.
 
 ### Node 14: Update Aggregator DB (HTTP Request)
 - **Name**: `Update Aggregator DB`
