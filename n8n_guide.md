@@ -215,6 +215,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
       json: {
         articleId: article.id,
         title: article.title,
+        content: article.content,
         source_name: article.source_name,
         url: article.url,
         image_url: article.image_url,
