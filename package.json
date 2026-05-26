@@ -1,0 +1,22 @@
+{
+  "name": "syrian_news_aggregator",
+  "version": "1.0.0",
+  "description": "This subdirectory contains the implementation of the Syrian News Aggregator and WP Posting System.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.16.1",
+    "better-sqlite3": "^12.10.0",
+    "cheerio": "^1.2.0",
+    "express": "^4.19.2",
+    "iconv-lite": "^0.7.2",
+    "rss-parser": "^3.13.0"
+  }
+}

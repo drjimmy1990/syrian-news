@@ -1,0 +1,300 @@
+{
+  "name": "Syrian News Aggregator & AI Rewriter Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": "interval",
+        "value": 15,
+        "unit": "minutes"
+      },
+      "id": "4a7b5d19-4f7f-4424-9b2f-309191e4a6a5",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Triggers every 15 minutes to aggregate Syrian news articles."
+    },
+    {
+      "parameters": {
+        "url": "https://www.enabbaladi.net/wp-json/wp/v2/posts?per_page=10&_embed=1"
+      },
+      "id": "db00de23-0ad2-430b-9dfd-b06bb0769cf3",
+      "name": "Fetch Latest News (HTTP Request)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Fetches high-resiliency WP REST API feed for Syrian news."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "",
+        "options": {}
+      },
+      "id": "d0bead57-9dbd-4f11-be71-cf2c12ea880a",
+      "name": "Item Lists (Loop Over Articles)",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 2.1,
+      "position": [
+        650,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Processes each scraped article individually."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, title_hash, url_hash FROM articles WHERE url_hash = :urlHash OR title_hash = :titleHash LIMIT 1",
+        "additionalFields": {
+          "parameterNumbers": {
+            "parameter": [
+              {
+                "name": "urlHash",
+                "value": "={{$json.link}}"
+              },
+              {
+                "name": "titleHash",
+                "value": "={{$json.title.rendered}}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b34e568d-8fd2-4bbf-bb78-4db81d6d87cd",
+      "name": "SQLite Deduplication Check",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Performs exact hash deduplication gate check."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.length}}",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "cb1c34a2-bd32-411a-85eb-e362c1cfcfbe",
+      "name": "Is Unique?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "If no existing record was found, proceed to AI rewrite stage."
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "أنت صحفي محترف. أعد صياغة الخبر التالي باللغة العربية الفصحى بأسلوب احترافي وجذاب مع الحفاظ على الدقة والمصداقية وتجنب التكرار. احتفظ بهيكل الـ HTML كما هو دون تغيير الوسوم."
+            },
+            {
+              "role": "user",
+              "content": "={{$node[\"Item Lists (Loop Over Articles)\"].json.content.rendered}}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "99f8d6fb-cf55-4ff8-9de2-98319f6a73c1",
+      "name": "AI Paraphraser (OpenAI)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        200
+      ],
+      "notesInFlow": true,
+      "notes": "Executes professional Arabic rewriting of article content."
+    },
+    {
+      "parameters": {
+        "title": "={{$node[\"Item Lists (Loop Over Articles)\"].json.title.rendered}}",
+        "content": "={{$json.choices[0].message.content}}",
+        "status": "draft",
+        "additionalFields": {
+          "excerpt": "={{$node[\"Item Lists (Loop Over Articles)\"].json.excerpt.rendered}}"
+        }
+      },
+      "id": "e30cb78f-ef1a-471a-9f5b-fb67362a7fb4",
+      "name": "WordPress (Create Draft)",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        200
+      ],
+      "notesInFlow": true,
+      "notes": "Publishes newly paraphrased article content directly as WP draft."
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "articles",
+        "columns": {
+          "column": [
+            {
+              "name": "title",
+              "value": "={{$node[\"Item Lists (Loop Over Articles)\"].json.title.rendered}}"
+            },
+            {
+              "name": "url",
+              "value": "={{$node[\"Item Lists (Loop Over Articles)\"].json.link}}"
+            },
+            {
+              "name": "content",
+              "value": "={{$node[\"AI Paraphraser (OpenAI)\"].json.choices[0].message.content}}"
+            },
+            {
+              "name": "wp_post_id",
+              "value": "={{$node[\"WordPress (Create Draft)\"].json.id}}"
+            },
+            {
+              "name": "scraped_at",
+              "value": "={{$now}}"
+            }
+          ]
+        }
+      },
+      "id": "31bfa82e-9dfb-46bf-8dfc-3abfbe3e6e11",
+      "name": "Save to Local DB",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        200
+      ],
+      "notesInFlow": true,
+      "notes": "Saves article metadata & WP post ID to local SQLite DB to prevent duplicate aggregates."
+    },
+    {
+      "parameters": {},
+      "id": "5cb8ee24-9b2f-48d9-a78b-d7d812ebdfc8",
+      "name": "Duplicate Bypassed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        400
+      ],
+      "notesInFlow": true,
+      "notes": "Graceful exit when near-duplicate or exact URL matches exist."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Latest News (HTTP Request)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Latest News (HTTP Request)": {
+      "main": [
+        [
+          {
+            "node": "Item Lists (Loop Over Articles)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Item Lists (Loop Over Articles)": {
+      "main": [
+        [
+          {
+            "node": "SQLite Deduplication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQLite Deduplication Check": {
+      "main": [
+        [
+          {
+            "node": "Is Unique?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Unique?": {
+      "main": [
+        [
+          {
+            "node": "AI Paraphraser (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicate Bypassed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Paraphraser (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "WordPress (Create Draft)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress (Create Draft)": {
+      "main": [
+        [
+          {
+            "node": "Save to Local DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionTimeout": 3600
+  },
+  "meta": {
+    "templateId": "syrian-news-aggregator-ai-paraphraser"
+  }
+}

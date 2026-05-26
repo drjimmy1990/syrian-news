@@ -1,0 +1,197 @@
+{
+  "name": "🔍 AI Dedup Check — Syrian News Aggregator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-dedup-01",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "notesInFlow": true,
+      "notes": "Runs every 15 minutes. Can also be triggered manually."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "aggregatorUrl",
+              "value": "http://localhost:3000"
+            },
+            {
+              "name": "recentTitlesLimit",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "config-dedup-01",
+      "name": "⚙️ Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [400, 300],
+      "notesInFlow": true,
+      "notes": "⚙️ Configure:\n- aggregatorUrl: your aggregator server\n- recentTitlesLimit: how many recent titles to fetch for comparison (50-100 recommended)"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.aggregatorUrl }}/api/articles?status=processed&limit=20",
+        "options": {}
+      },
+      "id": "fetch-new-01",
+      "name": "Fetch Unprocessed Articles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300],
+      "notesInFlow": true,
+      "notes": "Gets recently scraped articles that haven't been checked for duplicates yet"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('⚙️ Configuration').first().json.aggregatorUrl }}/api/articles/recent-titles?limit={{ $('⚙️ Configuration').first().json.recentTitlesLimit }}",
+        "options": {}
+      },
+      "id": "fetch-titles-01",
+      "name": "Fetch Recent Published Titles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 500],
+      "notesInFlow": true,
+      "notes": "Fetches the latest N titles from the aggregator DB for AI comparison"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge: new articles + existing titles for comparison\nconst articlesResponse = $('Fetch Unprocessed Articles').first().json;\nconst titlesResponse = $('Fetch Recent Published Titles').first().json;\n\nif (!articlesResponse.success || !articlesResponse.data || articlesResponse.data.length === 0) {\n  return []; // No new articles to check\n}\n\nconst existingTitles = (titlesResponse.titles || []).map(t => t.title);\nconst newArticles = articlesResponse.data.filter(a => \n  a.content && \n  a.content.trim().length > 50 && \n  !a.wordpress_post_id &&\n  a.status !== 'duplicate_skipped'\n);\n\nreturn newArticles.map(article => ({\n  json: {\n    id: article.id,\n    title: article.title,\n    source_name: article.source_name,\n    url: article.url,\n    existingTitles: existingTitles.join('\\n')\n  }\n}));"
+      },
+      "id": "merge-dedup-01",
+      "name": "Prepare Dedup Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 400],
+      "notesInFlow": true,
+      "notes": "Combines new articles with existing titles list for AI comparison"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "أنت خبير في كشف الأخبار المكررة. مهمتك مقارنة عنوان خبر جديد مع قائمة عناوين أخبار منشورة سابقاً، لتحديد ما إذا كان الخبر الجديد يغطي نفس الحدث أو القصة الإخبارية.\n\nالقواعد:\n- خبر مكرر = نفس الحدث/القصة حتى لو بصياغة مختلفة تماماً\n- خبر غير مكرر = حدث مختلف أو تطور جديد في نفس القصة\n- انتبه للتشابه الدلالي وليس اللفظي فقط\n- إذا كان العنوان عاماً جداً ولا يمكن تحديد ما إذا كان مكرراً، اعتبره غير مكرر\n\nأرجع النتيجة كـ JSON فقط:\n{\n  \"isDuplicate\": true أو false,\n  \"matchedTitle\": \"العنوان المطابق\" أو null,\n  \"confidence\": 0.0 إلى 1.0,\n  \"reason\": \"سبب مختصر بالعربية\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "=العنوان الجديد:\n{{ $json.title }}\n\nالمصدر: {{ $json.source_name }}\n\nقائمة العناوين المنشورة سابقاً:\n{{ $json.existingTitles }}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 300
+        }
+      },
+      "id": "ai-dedup-01",
+      "name": "🤖 AI Duplicate Check",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [1000, 400],
+      "notesInFlow": true,
+      "notes": "Asks AI to compare the new article title against all recent published titles"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and decide: duplicate or not?\nconst raw = $input.first().json.message?.content || $input.first().json.text || '';\nconst article = $('Prepare Dedup Payload').first().json;\nconst config = $('⚙️ Configuration').first().json;\n\nlet result;\ntry {\n  let jsonStr = raw;\n  const fenceMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (fenceMatch) jsonStr = fenceMatch[1].trim();\n  result = JSON.parse(jsonStr);\n} catch (e) {\n  // If parsing fails, assume not duplicate (safe default)\n  result = { isDuplicate: false, confidence: 0, reason: 'فشل تحليل رد الذكاء الاصطناعي' };\n}\n\nreturn [{\n  json: {\n    articleId: article.id,\n    title: article.title,\n    source_name: article.source_name,\n    url: article.url,\n    isDuplicate: result.isDuplicate === true,\n    matchedTitle: result.matchedTitle || null,\n    confidence: result.confidence || 0,\n    reason: result.reason || '',\n    aggregatorUrl: config.aggregatorUrl\n  }\n}];"
+      },
+      "id": "parse-dedup-01",
+      "name": "Parse AI Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400],
+      "notesInFlow": true,
+      "notes": "Parses the AI's JSON verdict and routes accordingly"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.isDuplicate }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-duplicate-01",
+      "name": "Is Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1400, 400],
+      "notesInFlow": true,
+      "notes": "Routes: TRUE → mark as duplicate, FALSE → continue to rewrite+publish"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.aggregatorUrl }}/api/articles/{{ $json.articleId }}/mark-duplicate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ matchedTitle: $json.matchedTitle }) }}",
+        "options": {}
+      },
+      "id": "mark-dup-01",
+      "name": "❌ Mark as Duplicate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 300],
+      "notesInFlow": true,
+      "notes": "Marks the article as 'duplicate_skipped' in the aggregator DB"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Article passed dedup check — output it for the rewrite+publish workflow\nconst article = $input.first().json;\nreturn [{\n  json: {\n    articleId: article.articleId,\n    title: article.title,\n    source_name: article.source_name,\n    url: article.url,\n    status: 'dedup_passed',\n    message: `✅ ${article.title} — مقال فريد، جاهز للنشر`\n  }\n}];"
+      },
+      "id": "pass-dedup-01",
+      "name": "✅ Passed — Ready for Publish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 500],
+      "notesInFlow": true,
+      "notes": "Article is unique — can be picked up by the rewrite+publish workflow"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "⚙️ Configuration", "type": "main", "index": 0 }]] },
+    "⚙️ Configuration": { "main": [[{ "node": "Fetch Unprocessed Articles", "type": "main", "index": 0 }, { "node": "Fetch Recent Published Titles", "type": "main", "index": 0 }]] },
+    "Fetch Unprocessed Articles": { "main": [[{ "node": "Prepare Dedup Payload", "type": "main", "index": 0 }]] },
+    "Fetch Recent Published Titles": { "main": [[{ "node": "Prepare Dedup Payload", "type": "main", "index": 0 }]] },
+    "Prepare Dedup Payload": { "main": [[{ "node": "🤖 AI Duplicate Check", "type": "main", "index": 0 }]] },
+    "🤖 AI Duplicate Check": { "main": [[{ "node": "Parse AI Decision", "type": "main", "index": 0 }]] },
+    "Parse AI Decision": { "main": [[{ "node": "Is Duplicate?", "type": "main", "index": 0 }]] },
+    "Is Duplicate?": {
+      "main": [
+        [{ "node": "❌ Mark as Duplicate", "type": "main", "index": 0 }],
+        [{ "node": "✅ Passed — Ready for Publish", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "syrian-news-aggregator" },
+    { "name": "ai-deduplication" },
+    { "name": "anti-duplicate" }
+  ]
+}

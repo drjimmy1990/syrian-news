@@ -1,0 +1,217 @@
+{
+  "name": "✍️ AI Rewrite & Publish — Syrian News Aggregator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-01",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "notesInFlow": true,
+      "notes": "Runs every 15 minutes. Can also be triggered manually."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "aggregatorUrl",
+              "value": "http://localhost:3000"
+            },
+            {
+              "name": "wpUrl",
+              "value": "https://your-wordpress-site.com"
+            },
+            {
+              "name": "wpUsername",
+              "value": "admin"
+            },
+            {
+              "name": "wpAppPassword",
+              "value": "xxxx xxxx xxxx xxxx"
+            },
+            {
+              "name": "wpPostStatus",
+              "value": "draft"
+            }
+          ]
+        }
+      },
+      "id": "config-01",
+      "name": "⚙️ Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [400, 300],
+      "notesInFlow": true,
+      "notes": "⚙️ Configure:\n- aggregatorUrl: your local server\n- wpUrl: WordPress site\n- wpUsername + wpAppPassword\n- wpPostStatus: draft or publish"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.aggregatorUrl }}/api/articles?status=processed&limit=10",
+        "options": {}
+      },
+      "id": "fetch-articles-01",
+      "name": "Fetch Unprocessed Articles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300],
+      "notesInFlow": true,
+      "notes": "Gets articles with status 'processed' (not yet published to WP)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract articles from API response and filter those with content\nconst response = $input.first().json;\nif (!response.success || !response.data || response.data.length === 0) {\n  return []; // No articles to process\n}\n\n// Filter articles that have content and no WP post ID yet\nconst articles = response.data.filter(a => \n  a.content && \n  a.content.trim().length > 50 && \n  !a.wordpress_post_id\n);\n\nreturn articles.map(article => ({\n  json: {\n    id: article.id,\n    title: article.title,\n    content: article.content,\n    url: article.url,\n    source_name: article.source_name,\n    published_at: article.published_at || new Date().toISOString()\n  }\n}));"
+      },
+      "id": "extract-articles-01",
+      "name": "Extract Publishable Articles",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "notesInFlow": true,
+      "notes": "Filters articles that have content and haven't been published to WP yet"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "أنت صحفي محترف في وكالة أنباء سورية. مهمتك إعادة صياغة الخبر التالي باللغة العربية الفصحى بأسلوب إخباري احترافي وجذاب.\n\nالقواعد:\n- احتفظ بجميع الحقائق والأرقام والأسماء دون تغيير\n- أعد الصياغة بأسلوبك الخاص دون نسخ النص الأصلي\n- اجعل العنوان جذاباً ومختصراً\n- احتفظ بهيكل HTML (الفقرات، القوائم، العناوين الفرعية)\n- لا تضف معلومات جديدة\n- الحد الأقصى للمحتوى: نفس طول النص الأصلي تقريباً\n\nأرجع النتيجة بتنسيق JSON فقط:\n{\n  \"title\": \"العنوان المُعاد صياغته\",\n  \"content\": \"المحتوى المُعاد صياغته بصيغة HTML\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "=أعد صياغة هذا الخبر:\n\nالعنوان: {{ $json.title }}\n\nالمحتوى:\n{{ $json.content }}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2000
+        }
+      },
+      "id": "openai-rewrite-01",
+      "name": "🤖 AI Rewrite Article",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [1000, 300],
+      "notesInFlow": true,
+      "notes": "Rewrites the article content with professional Arabic journalism style"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the rewritten content from LLM\nconst raw = $input.first().json.message?.content || $input.first().json.text || '';\nconst originalArticle = $('Extract Publishable Articles').first().json;\n\nlet rewritten;\ntry {\n  let jsonStr = raw;\n  const fenceMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (fenceMatch) jsonStr = fenceMatch[1].trim();\n  rewritten = JSON.parse(jsonStr);\n} catch (e) {\n  // If JSON parse fails, use the raw text as content\n  rewritten = {\n    title: originalArticle.title,\n    content: raw\n  };\n}\n\nreturn [{\n  json: {\n    articleId: originalArticle.id,\n    originalTitle: originalArticle.title,\n    rewrittenTitle: rewritten.title || originalArticle.title,\n    rewrittenContent: rewritten.content || raw,\n    url: originalArticle.url,\n    source_name: originalArticle.source_name,\n    published_at: originalArticle.published_at\n  }\n}];"
+      },
+      "id": "parse-rewrite-01",
+      "name": "Parse Rewritten Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "notesInFlow": true,
+      "notes": "Extracts the rewritten title and content from LLM JSON response"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the WordPress post payload with source attribution\nconst article = $input.first().json;\nconst config = $('⚙️ Configuration').first().json;\n\n// Format source attribution block (RTL Arabic)\nconst attribution = `\n<blockquote style=\"direction: rtl; text-align: right; border-right: 4px solid #3b82f6; padding: 12px; margin: 20px 0; background: #f8f9fa; font-size: 14px;\">\n  <strong>المصدر:</strong> ${article.source_name}<br>\n  <a href=\"${article.url}\" target=\"_blank\" rel=\"noopener noreferrer\">الرابط الأصلي</a>\n</blockquote>`;\n\nconst fullContent = `<div dir=\"rtl\" style=\"text-align: right;\">\n${article.rewrittenContent}\n${attribution}\n</div>`;\n\nreturn [{\n  json: {\n    articleId: article.articleId,\n    wpPayload: {\n      title: article.rewrittenTitle,\n      content: fullContent,\n      status: config.wpPostStatus || 'draft',\n      date: article.published_at,\n      meta: {\n        source_url: article.url,\n        source_name: article.source_name\n      }\n    },\n    wpUrl: config.wpUrl,\n    wpAuth: 'Basic ' + Buffer.from(`${config.wpUsername}:${config.wpAppPassword}`).toString('base64'),\n    aggregatorUrl: config.aggregatorUrl\n  }\n}];"
+      },
+      "id": "build-wp-payload-01",
+      "name": "Build WP Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 300],
+      "notesInFlow": true,
+      "notes": "Builds the WordPress REST API post body with RTL source attribution"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.wpUrl }}/wp-json/wp/v2/posts",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.wpPayload) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.wpAuth }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "wp-publish-01",
+      "name": "📤 Publish to WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 300],
+      "notesInFlow": true,
+      "notes": "POSTs the rewritten article to WordPress REST API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update the aggregator DB with WP post ID and rewritten content\nconst wpResponse = $input.first().json;\nconst buildPayload = $('Build WP Payload').first().json;\n\nconst wpPostId = wpResponse.id || null;\nconst articleId = buildPayload.articleId;\nconst aggregatorUrl = buildPayload.aggregatorUrl;\n\nreturn [{\n  json: {\n    articleId,\n    wpPostId,\n    aggregatorUrl,\n    updatePayload: {\n      content: buildPayload.wpPayload.content,\n      status: wpPostId ? 'published' : 'processed',\n      wordpress_post_id: wpPostId\n    }\n  }\n}];"
+      },
+      "id": "prepare-update-01",
+      "name": "Prepare DB Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 300],
+      "notesInFlow": true,
+      "notes": "Extracts WP post ID from response, prepares aggregator DB update"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.aggregatorUrl }}/api/articles/{{ $json.articleId }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.updatePayload) }}",
+        "options": {}
+      },
+      "id": "update-aggregator-01",
+      "name": "Update Aggregator DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 300],
+      "notesInFlow": true,
+      "notes": "Updates the article in the aggregator with rewritten content + WP post ID"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "⚙️ Configuration", "type": "main", "index": 0 }]] },
+    "⚙️ Configuration": { "main": [[{ "node": "Fetch Unprocessed Articles", "type": "main", "index": 0 }]] },
+    "Fetch Unprocessed Articles": { "main": [[{ "node": "Extract Publishable Articles", "type": "main", "index": 0 }]] },
+    "Extract Publishable Articles": { "main": [[{ "node": "🤖 AI Rewrite Article", "type": "main", "index": 0 }]] },
+    "🤖 AI Rewrite Article": { "main": [[{ "node": "Parse Rewritten Content", "type": "main", "index": 0 }]] },
+    "Parse Rewritten Content": { "main": [[{ "node": "Build WP Payload", "type": "main", "index": 0 }]] },
+    "Build WP Payload": { "main": [[{ "node": "📤 Publish to WordPress", "type": "main", "index": 0 }]] },
+    "📤 Publish to WordPress": { "main": [[{ "node": "Prepare DB Update", "type": "main", "index": 0 }]] },
+    "Prepare DB Update": { "main": [[{ "node": "Update Aggregator DB", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "syrian-news-aggregator" },
+    { "name": "ai-rewriting" },
+    { "name": "wordpress-publishing" }
+  ]
+}

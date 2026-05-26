@@ -1,0 +1,220 @@
+{
+  "name": "🔍 AI Selector Discovery — Syrian News Aggregator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-selector-discovery",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 150],
+      "notesInFlow": true,
+      "notes": "⚡ Webhook Trigger: Accepts targetUrl & aggregatorBaseUrl POST payload and returns selector JSON synchronously."
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "trigger-01",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "notesInFlow": true,
+      "notes": "Start manually. Set the target news URL in the next node."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "targetUrl",
+              "value": "={{ $json.body?.targetUrl || $json.query?.targetUrl || \"https://www.enabbaladi.net\" }}"
+            },
+            {
+              "name": "aggregatorBaseUrl",
+              "value": "={{ $json.body?.aggregatorBaseUrl || $json.query?.aggregatorBaseUrl || \"http://localhost:3000\" }}"
+            }
+          ]
+        }
+      },
+      "id": "set-params-01",
+      "name": "Set Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [400, 300],
+      "notesInFlow": true,
+      "notes": "⚙️ Merges parameters from Webhook body or falls back to manual defaults"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.targetUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "ar,en-US;q=0.7,en;q=0.3"
+            }
+          ]
+        }
+      },
+      "id": "fetch-page-01",
+      "name": "Fetch Page HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300],
+      "notesInFlow": true,
+      "notes": "Fetches the news website with browser-like headers"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Condense the HTML DOM into a structural skeleton for LLM analysis\nconst html = $input.first().json.data || $input.first().json.body || '';\nconst targetUrl = $('Set Parameters').first().json.targetUrl;\n\n// Simple DOM condensation: strip scripts/styles, keep structure\nlet cleaned = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<iframe[^>]*>[\\s\\S]*?<\\/iframe>/gi, '')\n  .replace(/<noscript[^>]*>[\\s\\S]*?<\\/noscript>/gi, '')\n  .replace(/<svg[^>]*>[\\s\\S]*?<\\/svg>/gi, '')\n  .replace(/<!--[\\s\\S]*?-->/g, '')\n  .replace(/<img[^>]*>/gi, '<img>')\n  .replace(/<br\\s*\\/?>/gi, '')\n  .replace(/<hr\\s*\\/?>/gi, '')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\n// Truncate to ~10KB for LLM context window\nif (cleaned.length > 10000) {\n  cleaned = cleaned.substring(0, 10000) + '\\n<!-- ... truncated ... -->';\n}\n\nreturn [{\n  json: {\n    targetUrl,\n    domSkeleton: cleaned,\n    domLength: cleaned.length\n  }\n}];"
+      },
+      "id": "clean-dom-01",
+      "name": "Clean & Condense DOM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "notesInFlow": true,
+      "notes": "Strips noise (scripts, styles, SVG), condenses HTML to ~10KB structural skeleton"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "You are an expert web scraper analyst for Arabic news websites. Given a condensed HTML DOM structure, identify the CSS selectors needed to scrape news articles.\n\nYour output MUST be ONLY valid JSON with this structure:\n{\n  \"strategy\": \"html\",\n  \"confidence\": 0.0 to 1.0,\n  \"reasoning\": \"Brief Arabic explanation\",\n  \"rssUrl\": \"discovered RSS URL or null\",\n  \"selectors\": {\n    \"list\": {\n      \"container\": \"CSS selector for each article item\",\n      \"title\": \"CSS selector for title within container\",\n      \"link\": \"CSS selector for link within container\"\n    },\n    \"article\": {\n      \"title\": \"CSS selector for article page title\",\n      \"content\": \"CSS selector for main content area\",\n      \"date\": \"CSS selector for publication date\"\n    }\n  }\n}\n\nRules:\n- Container must match MULTIPLE repeating elements (article cards)\n- Title/link selectors are RELATIVE to container\n- Prefer class-based selectors\n- Look for RSS/feed links and include in rssUrl if found\n- If you find <link type=\"application/rss+xml\"> extract its href",
+              "role": "system"
+            },
+            {
+              "content": "=Analyze this news website and return the JSON selectors.\n\nURL: {{ $json.targetUrl }}\n\nDOM structure:\n```\n{{ $json.domSkeleton }}\n```",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 800
+        }
+      },
+      "id": "openai-analyze-01",
+      "name": "🤖 LLM Analyze DOM",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [1000, 300],
+      "notesInFlow": true,
+      "notes": "Sends condensed DOM to GPT-4o-mini to discover selectors. Returns JSON."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the LLM response and prepare the payload for the aggregator API\nconst raw = $input.first().json.message?.content || $input.first().json.text || '';\n\nlet parsed;\ntry {\n  // Handle markdown code fences\n  let jsonStr = raw;\n  const fenceMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (fenceMatch) jsonStr = fenceMatch[1].trim();\n  parsed = JSON.parse(jsonStr);\n} catch (e) {\n  return [{ json: { success: false, error: `LLM response is not valid JSON: ${e.message}`, raw } }];\n}\n\n// Validate structure\nif (!parsed.selectors?.list?.container) {\n  return [{ json: { success: false, error: 'LLM did not return valid selectors', raw } }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    strategy: parsed.strategy || 'html',\n    confidence: parsed.confidence || 0.5,\n    reasoning: parsed.reasoning || '',\n    rssUrl: parsed.rssUrl || null,\n    selectors: parsed.selectors\n  }\n}];"
+      },
+      "id": "parse-result-01",
+      "name": "Parse LLM Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "notesInFlow": true,
+      "notes": "Parses JSON from LLM response, validates selector structure"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-success-01",
+      "name": "Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Set Parameters').first().json.aggregatorBaseUrl }}/api/sources/ai-detect",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $('Set Parameters').first().json.targetUrl }}"
+            },
+            {
+              "name": "selectors",
+              "value": "={{ JSON.stringify($json.selectors) }}"
+            },
+            {
+              "name": "strategy",
+              "value": "={{ $json.strategy }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-back-01",
+      "name": "Save to Aggregator (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 250],
+      "notesInFlow": true,
+      "notes": "Optional: sends results back to the aggregator API"
+    },
+    {
+      "parameters": {},
+      "id": "noop-fail-01",
+      "name": "Log Failure",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1600, 400],
+      "notesInFlow": true,
+      "notes": "Detection failed — check the LLM raw output for debugging"
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Set Parameters", "type": "main", "index": 0 }]] },
+    "Manual Trigger": { "main": [[{ "node": "Set Parameters", "type": "main", "index": 0 }]] },
+    "Set Parameters": { "main": [[{ "node": "Fetch Page HTML", "type": "main", "index": 0 }]] },
+    "Fetch Page HTML": { "main": [[{ "node": "Clean & Condense DOM", "type": "main", "index": 0 }]] },
+    "Clean & Condense DOM": { "main": [[{ "node": "🤖 LLM Analyze DOM", "type": "main", "index": 0 }]] },
+    "🤖 LLM Analyze DOM": { "main": [[{ "node": "Parse LLM Result", "type": "main", "index": 0 }]] },
+    "Parse LLM Result": { "main": [[{ "node": "Success?", "type": "main", "index": 0 }]] },
+    "Success?": {
+      "main": [
+        [{ "node": "Save to Aggregator (Optional)", "type": "main", "index": 0 }],
+        [{ "node": "Log Failure", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "syrian-news-aggregator" },
+    { "name": "ai-selector-discovery" }
+  ]
+}
