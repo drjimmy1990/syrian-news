@@ -1577,12 +1577,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Delete by date range
   if (DOM.btnDeleteByDate) {
     DOM.btnDeleteByDate.addEventListener('click', () => {
-      const dateFrom = DOM.filterDateFrom ? DOM.filterDateFrom.value : '';
-      const dateTo = DOM.filterDateTo ? DOM.filterDateTo.value : '';
-      if (!dateFrom || !dateTo) {
+      let dateFrom = DOM.filterDateFrom ? DOM.filterDateFrom.value : '';
+      let dateTo = DOM.filterDateTo ? DOM.filterDateTo.value : '';
+      
+      // If neither date is set, show warning
+      if (!dateFrom && !dateTo) {
         showToast('حدد نطاق التاريخ (من - إلى) أولاً ثم اضغط حذف حسب التاريخ.', 'warning');
         return;
       }
+      
+      // Auto-fill missing date: if only "from" is set, use today as "to"
+      if (dateFrom && !dateTo) {
+        dateTo = new Date().toISOString().split('T')[0];
+      }
+      // If only "to" is set, use a very early date as "from"
+      if (!dateFrom && dateTo) {
+        dateFrom = '2020-01-01';
+      }
+
       openConfirmModal(
         'حذف مقالات حسب التاريخ',
         `سيتم حذف جميع المقالات من ${dateFrom} إلى ${dateTo} بشكل نهائي.`,
@@ -1595,6 +1607,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const result = await res.json();
           if (!result.success) throw new Error(result.error);
           showToast(result.message, 'success');
+          loadArticlesTable();
         }
       );
     });

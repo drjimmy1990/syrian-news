@@ -223,10 +223,13 @@ app.delete('/api/articles/clean', (req, res) => {
  * DELETE /api/articles/by-date - Delete articles in a date range
  */
 app.delete('/api/articles/by-date', (req, res) => {
-  const { startDate, endDate } = req.body;
-  if (!startDate || !endDate) {
-    return res.status(400).json({ success: false, error: 'يرجى تحديد تاريخ البداية والنهاية.' });
+  let { startDate, endDate } = req.body;
+  if (!startDate && !endDate) {
+    return res.status(400).json({ success: false, error: 'يرجى تحديد تاريخ البداية أو النهاية.' });
   }
+  // Default missing dates
+  if (!startDate) startDate = '2020-01-01T00:00:00Z';
+  if (!endDate) endDate = new Date().toISOString();
   const config = readConfig();
   const dbPath = config.general.dbPath || 'news_aggregator.db';
   try {
