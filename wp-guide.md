@@ -1,386 +1,366 @@
-# 📘 WordPress REST API Guide — souree.net
+# 📘 WordPress REST API Guide for n8n — souree.net
 
 ## 🔑 Authentication
 
-All requests use **Basic Auth** with your Application Password.
+In every **HTTP Request** node in n8n, set:
 
-```
-Username: admin
-App Password: Ny5d 3Khd ufj7 y6C5 XdMX J5zr
-```
+| Setting | Value |
+|---------|-------|
+| **Authentication** | `Generic Credential Type` → `Basic Auth` |
+| **User** | `admin` |
+| **Password** | `Ny5d 3Khd ufj7 y6C5 XdMX J5zr` |
 
-**Base64 token** (used in headers):
-```bash
-echo -n "admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr" | base64
-# Result: YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=
-```
-
-Every curl below uses this header:
-```
--H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+> 💡 **Tip**: Create the credential **once** in n8n (Settings → Credentials → Add → Basic Auth), name it `WordPress souree.net`, then reuse it in every HTTP Request node.
 
 ---
 
 ## 📂 Categories
 
-### List All Categories
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/categories?per_page=100" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  | python3 -m json.tool
-```
-
 ### Your Category IDs (souree.net)
 
-| ID | Name | Slug |
-|----|------|------|
-| 20 | الأخبار (محلي) | news |
-| 21 | سياسة | politics |
-| 22 | تقارير | reports |
-| 24 | اقتصاد | economy |
-| 25 | أخبار رسمية | official |
-| 26 | مجتمع | society |
-| 28 | ثقافة | culture |
-| 29 | فن | art |
-| 32 | رياضة | sports |
-| 35 | تكنولوجيا | technology |
-| 71 | العالم (دولي) | international |
-| 102 | عسكري وأمني | military-security |
-| 41 | دمشق | damascus |
-| 42 | حلب | aleppo |
-| 43 | حمص | homs |
-| 44 | حماة | hama |
-| 45 | إدلب | idlib |
-| 46 | درعا | daraa |
-| 33 | منوعات | misc |
+| ID | Name | Use For |
+|----|------|---------|
+| 20 | الأخبار | محلي (default) |
+| 21 | سياسة | أخبار سياسية |
+| 22 | تقارير | تقارير مطولة |
+| 24 | اقتصاد | أخبار اقتصادية |
+| 25 | أخبار رسمية | بيانات رسمية |
+| 26 | مجتمع | شؤون اجتماعية |
+| 28 | ثقافة | ثقافة وأدب |
+| 29 | فن | فنون |
+| 32 | رياضة | أخبار رياضية |
+| 35 | تكنولوجيا | تقنية |
+| 71 | العالم | أخبار دولية |
+| 102 | عسكري وأمني | أمن وعسكر |
+| 41 | دمشق | — |
+| 42 | حلب | — |
+| 43 | حمص | — |
+| 44 | حماة | — |
+| 45 | إدلب | — |
+| 46 | درعا | — |
+| 33 | منوعات | متفرقات |
 
-### Create a New Category
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/categories" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "اسم التصنيف", "slug": "category-slug"}' \
-  | python3 -m json.tool
-```
+### List All Categories (HTTP Request Node)
 
-### Get a Single Category by ID
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/categories/21" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/categories?per_page=100` |
+| Authentication | Basic Auth (WordPress credential) |
+| Response Format | JSON |
 
-### Update a Category
-```bash
-curl -s -X PUT "https://www.souree.net/wp-json/wp/v2/categories/21" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "اسم جديد", "description": "وصف التصنيف"}'
-```
+### Create a New Category (HTTP Request Node)
 
-### Delete a Category
-```bash
-curl -s -X DELETE "https://www.souree.net/wp-json/wp/v2/categories/99?force=true" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
+| Setting | Value |
+|---------|-------|
+| Method | `POST` |
+| URL | `https://www.souree.net/wp-json/wp/v2/categories` |
+| Authentication | Basic Auth |
+| Body Content Type | JSON |
+
+**JSON Body:**
+```json
+{
+  "name": "اسم التصنيف",
+  "slug": "category-slug"
+}
 ```
 
 ---
 
 ## 📝 Posts
 
-### List Recent Posts
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/posts?per_page=5&status=publish" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  | python3 -m json.tool
-```
+### List Recent Posts (HTTP Request Node)
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts?per_page=5&status=publish` |
+| Authentication | Basic Auth |
+| Response Format | JSON |
 
 ### List Draft Posts
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/posts?per_page=10&status=draft" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts?per_page=10&status=draft` |
+| Authentication | Basic Auth |
 
 ### List Posts by Category
-```bash
-# Get all posts in سياسة (ID: 21)
-curl -s "https://www.souree.net/wp-json/wp/v2/posts?categories=21&per_page=10" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts?categories=21&per_page=10` |
+| Authentication | Basic Auth |
+
+> Change `21` to any category ID from the table above.
 
 ### Search Posts by Title
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/posts?search=سوريا&per_page=5" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts?search=سوريا&per_page=5` |
+| Authentication | Basic Auth |
+
+### Create a Post — Draft (HTTP Request Node)
+
+| Setting | Value |
+|---------|-------|
+| Method | `POST` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts` |
+| Authentication | Basic Auth |
+| Body Content Type | JSON |
+
+**JSON Body:**
+```json
+{
+  "title": "عنوان الخبر",
+  "content": "<p>محتوى الخبر بصيغة HTML</p>",
+  "status": "draft",
+  "categories": [21]
+}
 ```
 
-### Create a Post (as Draft)
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/posts" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "عنوان الخبر هنا",
-    "content": "<p>محتوى الخبر بصيغة HTML</p>",
-    "status": "draft",
-    "categories": [21]
-  }'
-```
+### Create a Post — Published Immediately
 
-### Create a Post (Published Immediately)
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/posts" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "عنوان الخبر",
-    "content": "<div dir=\"rtl\"><p>محتوى الخبر</p></div>",
-    "status": "publish",
-    "categories": [21, 41]
-  }'
+Same as above but change status:
+```json
+{
+  "title": "عنوان الخبر",
+  "content": "<div dir=\"rtl\"><p>محتوى الخبر</p></div>",
+  "status": "publish",
+  "categories": [21, 41]
+}
 ```
+> You can assign **multiple categories** by adding IDs to the array: `[21, 41]` = سياسة + دمشق
 
 ### Create a Post with Featured Image
-```bash
-# Step 1: Upload the image first (see Media section below)
-# Step 2: Use the returned media ID
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/posts" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "خبر مع صورة بارزة",
-    "content": "<p>محتوى الخبر</p>",
-    "status": "draft",
-    "categories": [24],
-    "featured_media": 12345
-  }'
-```
-> **Note**: `featured_media` is the ID returned from the media upload. This sets the "Featured Image" (الصورة البارزة) of the post.
 
-### Create a Post with Multiple Categories
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/posts" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "خبر سياسي من دمشق",
-    "content": "<p>تفاصيل الخبر</p>",
-    "status": "publish",
-    "categories": [21, 41]
-  }'
+```json
+{
+  "title": "خبر مع صورة بارزة",
+  "content": "<p>المحتوى</p>",
+  "status": "draft",
+  "categories": [24],
+  "featured_media": 12345
+}
 ```
-> This puts the post in both سياسة (21) AND دمشق (41).
+> ⚠️ `featured_media` is the **Media ID** returned after uploading the image (see Media section below). You must upload the image first!
 
-### Update an Existing Post
-```bash
-curl -s -X PUT "https://www.souree.net/wp-json/wp/v2/posts/POST_ID" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "عنوان محدّث",
-    "status": "publish"
-  }'
+### Update an Existing Post (HTTP Request Node)
+
+| Setting | Value |
+|---------|-------|
+| Method | `PUT` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts/POST_ID` |
+| Authentication | Basic Auth |
+| Body Content Type | JSON |
+
+**JSON Body** (only include fields you want to change):
+```json
+{
+  "title": "عنوان محدّث",
+  "status": "publish"
+}
 ```
 
-### Delete a Post (Trash)
-```bash
-curl -s -X DELETE "https://www.souree.net/wp-json/wp/v2/posts/POST_ID" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+### Delete a Post
 
-### Delete a Post (Permanently)
-```bash
-curl -s -X DELETE "https://www.souree.net/wp-json/wp/v2/posts/POST_ID?force=true" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+| Setting | Value |
+|---------|-------|
+| Method | `DELETE` |
+| URL | `https://www.souree.net/wp-json/wp/v2/posts/POST_ID` |
+| Authentication | Basic Auth |
+
+> Add `?force=true` to the URL to delete permanently (skip trash).
 
 ---
 
-## 🖼️ Media (Images)
+## 🖼️ Media (Images) — Featured Image Workflow
 
-### Upload an Image from a URL (2 Steps)
+### How Featured Images Work
 
-**Step 1: Download the image**
-```bash
-curl -s -o /tmp/news-image.jpg "https://example.com/path/to/image.jpg"
+WordPress requires **2 steps**:
+```
+Step 1: Upload image to Media Library → get back a Media ID (e.g. 12345)
+Step 2: Create post with "featured_media": 12345
 ```
 
-**Step 2: Upload to WordPress**
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/media" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Disposition: attachment; filename=news-image.jpg" \
-  -H "Content-Type: image/jpeg" \
-  --data-binary "@/tmp/news-image.jpg"
-```
+You cannot just pass an image URL — it must be uploaded first.
 
-**Response** (the important part):
-```json
-{
-  "id": 12345,
-  "source_url": "https://www.souree.net/wp-content/uploads/2026/05/news-image.jpg"
+### Upload Image — Code Node (Recommended Method)
+
+Use a **Code** node in n8n with this JavaScript:
+
+```javascript
+const article = $input.first().json;
+
+// If no image, skip and pass through
+if (!article.image_url) {
+  return [{ json: { ...article, featuredMediaId: 0 } }];
+}
+
+try {
+  // Step 1: Download the image from the source website
+  const imageResponse = await this.helpers.httpRequest({
+    method: 'GET',
+    url: article.image_url,
+    encoding: 'arraybuffer',
+    returnFullResponse: true,
+  });
+
+  // Extract filename from the URL
+  const urlParts = article.image_url.split('/');
+  const filename = urlParts[urlParts.length - 1].split('?')[0] || 'news-image.jpg';
+
+  // Step 2: Upload to WordPress Media Library
+  const wpResponse = await this.helpers.httpRequest({
+    method: 'POST',
+    url: `${article.wpUrl}/wp-json/wp/v2/media`,
+    headers: {
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Type': imageResponse.headers['content-type'] || 'image/jpeg',
+      'Authorization': 'Basic ' + Buffer.from('admin:Ny5d 3Khd ufj7 y6C5 XdMX J5zr').toString('base64'),
+    },
+    body: Buffer.from(imageResponse.body),
+  });
+
+  // Pass the Media ID forward
+  return [{ json: { ...article, featuredMediaId: wpResponse.id } }];
+} catch (e) {
+  // If upload fails, continue without featured image
+  return [{ json: { ...article, featuredMediaId: 0 } }];
 }
 ```
-> Use the `id` (e.g. `12345`) as `featured_media` when creating a post.
 
-### Upload an Image from URL (1 Command — Download + Upload)
-```bash
-curl -sL "https://example.com/image.jpg" | \
-  curl -s -X POST "https://www.souree.net/wp-json/wp/v2/media" \
-    -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-    -H "Content-Disposition: attachment; filename=news-image.jpg" \
-    -H "Content-Type: image/jpeg" \
-    --data-binary "@-"
-```
+> **Output**: This adds `featuredMediaId` to the article data. Use it as `featured_media` in the next node.
 
-### List Uploaded Media
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/media?per_page=10" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+### List Uploaded Media (HTTP Request Node)
 
-### Delete Media
-```bash
-curl -s -X DELETE "https://www.souree.net/wp-json/wp/v2/media/MEDIA_ID?force=true" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/media?per_page=10` |
+| Authentication | Basic Auth |
+
+### Delete Media (HTTP Request Node)
+
+| Setting | Value |
+|---------|-------|
+| Method | `DELETE` |
+| URL | `https://www.souree.net/wp-json/wp/v2/media/MEDIA_ID?force=true` |
+| Authentication | Basic Auth |
 
 ---
 
 ## 🏷️ Tags
 
-### List All Tags
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/tags?per_page=100" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
+### List All Tags (HTTP Request Node)
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `https://www.souree.net/wp-json/wp/v2/tags?per_page=100` |
+| Authentication | Basic Auth |
+
+### Create a Tag (HTTP Request Node)
+
+| Setting | Value |
+|---------|-------|
+| Method | `POST` |
+| URL | `https://www.souree.net/wp-json/wp/v2/tags` |
+| Authentication | Basic Auth |
+| Body Content Type | JSON |
+
+**JSON Body:**
+```json
+{
+  "name": "سوريا"
+}
 ```
 
-### Create a Tag
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/tags" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "سوريا"}'
-```
+### Use Tags in a Post
 
-### Create a Post with Tags
-```bash
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/posts" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "خبر مع وسوم",
-    "content": "<p>المحتوى</p>",
-    "status": "draft",
-    "categories": [21],
-    "tags": [10, 15, 22]
-  }'
-```
-
----
-
-## 👤 Users
-
-### List Users
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/users" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-```
-
-### Get Current User (Me)
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/users/me" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
+Add tag IDs to the post JSON:
+```json
+{
+  "title": "خبر مع وسوم",
+  "content": "<p>المحتوى</p>",
+  "status": "draft",
+  "categories": [21],
+  "tags": [10, 15, 22]
+}
 ```
 
 ---
 
-## 🔧 Useful Queries
+## 📋 Complete n8n Flow: Image Upload → Post Creation
 
-### Count Total Published Posts
-```bash
-curl -sI "https://www.souree.net/wp-json/wp/v2/posts?status=publish&per_page=1" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  | grep -i "x-wp-total"
+In your n8n workflow, the last 3 nodes should be:
+
+### Flow Diagram
+```
+[Build WP Payload] → [📷 Upload Image (Code)] → [📤 Create Post (HTTP Request)]
 ```
 
-### Get Site Info
-```bash
-curl -s "https://www.souree.net/wp-json/" | python3 -m json.tool | head -20
+### Node: 📷 Upload Image (Code Node)
+Use the JavaScript code from the "Upload Image" section above.
+
+### Node: 📤 Create Post (HTTP Request)
+
+| Setting | Value |
+|---------|-------|
+| Method | `POST` |
+| URL | `={{ $json.wpUrl }}/wp-json/wp/v2/posts` |
+| Authentication | Basic Auth (WordPress credential) |
+| Body Content Type | JSON |
+
+**JSON Body (use expressions):**
+```json
+{
+  "title": "={{ $json.postTitle }}",
+  "content": "={{ $json.postContent }}",
+  "status": "={{ $json.postStatus }}",
+  "categories": [{{ $json.categoryId }}],
+  "featured_media": {{ $json.featuredMediaId }}
+}
 ```
 
-### Test Authentication
-```bash
-curl -s "https://www.souree.net/wp-json/wp/v2/users/me" \
-  -H "Authorization: Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI=" \
-  | python3 -m json.tool
-```
-> If you see your user data, auth works. If you get `401`, the password is wrong.
+**Response**: WordPress returns the created post including its `id`. Use this to update the aggregator database.
 
 ---
 
-## 📋 Complete Example: Upload Image + Create Post
+## 🔧 Useful n8n Expressions
 
-```bash
-#!/bin/bash
-# Full pipeline: download image → upload to WP → create post with featured image
-
-IMAGE_URL="https://example.com/news-photo.jpg"
-AUTH="Basic YWRtaW46Tnk1ZCAzS2hkIHVmajcgeTZDNSBYZE1YIEo1enI="
-
-# Step 1: Download image
-echo "📥 Downloading image..."
-curl -sL "$IMAGE_URL" -o /tmp/article-image.jpg
-
-# Step 2: Upload to WordPress
-echo "📤 Uploading to WordPress..."
-MEDIA_RESPONSE=$(curl -s -X POST "https://www.souree.net/wp-json/wp/v2/media" \
-  -H "Authorization: $AUTH" \
-  -H "Content-Disposition: attachment; filename=article-image.jpg" \
-  -H "Content-Type: image/jpeg" \
-  --data-binary "@/tmp/article-image.jpg")
-
-# Extract media ID
-MEDIA_ID=$(echo "$MEDIA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-echo "✅ Image uploaded with ID: $MEDIA_ID"
-
-# Step 3: Create post with featured image
-echo "📝 Creating post..."
-curl -s -X POST "https://www.souree.net/wp-json/wp/v2/posts" \
-  -H "Authorization: $AUTH" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"title\": \"عنوان الخبر التجريبي\",
-    \"content\": \"<div dir='rtl'><p>هذا خبر تجريبي مع صورة بارزة</p></div>\",
-    \"status\": \"draft\",
-    \"categories\": [21],
-    \"featured_media\": $MEDIA_ID
-  }"
-
-echo ""
-echo "✅ Done! Check your WordPress drafts."
-```
+| What | Expression |
+|------|------------|
+| Get WordPress post ID from response | `{{ $json.id }}` |
+| Get post URL | `{{ $json.link }}` |
+| Get media URL after upload | `{{ $json.source_url }}` |
+| Current date (ISO) | `{{ $now.toISO() }}` |
+| Reference another node's data | `{{ $('Node Name').first().json.fieldName }}` |
 
 ---
 
-## ⚠️ Common Status Codes
+## ⚠️ Common Errors
 
-| Code | Meaning |
-|------|---------|
-| 200 | Success (GET, PUT) |
-| 201 | Created (POST) |
-| 400 | Bad request (missing required field) |
-| 401 | Unauthorized (bad credentials) |
-| 403 | Forbidden (no permission) |
-| 404 | Not found (wrong URL or ID) |
-| 500 | Server error |
+| Error | Meaning | Fix |
+|-------|---------|-----|
+| `401 Unauthorized` | Bad credentials | Check username and Application Password |
+| `403 Forbidden` | No permission | Make sure user has `administrator` role |
+| `400 Bad Request` | Missing field | Check required fields (title, content) |
+| `404 Not Found` | Wrong URL or ID | Verify the endpoint URL |
+| `rest_cannot_create` | Insufficient permissions | Enable Application Passwords in WordPress |
+| `featured_media invalid` | Wrong media ID | Upload image first, use the returned ID |
 
 ## 📌 Post Status Values
 
 | Value | Meaning |
 |-------|---------|
-| `publish` | Live on the site |
-| `draft` | Saved but not visible |
-| `pending` | Awaiting review |
+| `publish` | Live on the site immediately |
+| `draft` | Saved but not visible to visitors |
+| `pending` | Awaiting editor review |
 | `private` | Only visible to admins |
-| `trash` | In the trash |
