@@ -25,7 +25,8 @@ class Datastore {
         published_at TEXT,
         processed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
         wordpress_post_id INTEGER DEFAULT NULL,
-        status TEXT NOT NULL DEFAULT 'processed'
+        status TEXT NOT NULL DEFAULT 'processed',
+        image_url TEXT DEFAULT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_articles_url_hash ON processed_articles(url_hash);
       CREATE INDEX IF NOT EXISTS idx_articles_title_hash ON processed_articles(title_hash);
@@ -39,6 +40,11 @@ class Datastore {
       if (!hasContent) {
         this.db.exec('ALTER TABLE processed_articles ADD COLUMN content TEXT DEFAULT NULL');
         console.log('[DB] Migrated: added content column to processed_articles');
+      }
+      const hasImage = cols.some(c => c.name === 'image_url');
+      if (!hasImage) {
+        this.db.exec('ALTER TABLE processed_articles ADD COLUMN image_url TEXT DEFAULT NULL');
+        console.log('[DB] Migrated: added image_url column to processed_articles');
       }
     } catch (e) {
       // Ignore if table doesn't exist yet (first-run case)
@@ -233,6 +239,10 @@ class Datastore {
         updates.push("content = COALESCE(content, ?)");
         params.push(article.content);
       }
+      if (article.image_url) {
+        updates.push("image_url = COALESCE(image_url, ?)");
+        params.push(article.image_url);
+      }
       if (updates.length > 0) {
         params.push(existing.id);
         this.db.prepare(`UPDATE processed_articles SET ${updates.join(', ')} WHERE id = ?`).run(...params);
@@ -242,9 +252,9 @@ class Datastore {
 
     const stmt = this.db.prepare(`
       INSERT INTO processed_articles 
-        (title, url, normalized_url, url_hash, title_hash, content_hash, content, source_name, published_at, wordpress_post_id, status)
+        (title, url, normalized_url, url_hash, title_hash, content_hash, content, source_name, published_at, wordpress_post_id, status, image_url)
       VALUES 
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     try {
@@ -259,7 +269,8 @@ class Datastore {
         article.source_name,
         article.published_at || null,
         wordpressPostId,
-        wordpressPostId ? 'published' : 'processed'
+        wordpressPostId ? 'published' : 'processed',
+        article.image_url || null
       );
       return result.lastInsertRowid;
     } catch (err) {

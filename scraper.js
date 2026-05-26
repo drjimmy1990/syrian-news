@@ -152,12 +152,20 @@ async function fetchWPAPI(source) {
 
     const publishedAt = post.date_gmt ? new Date(post.date_gmt).toISOString() : new Date(post.date).toISOString();
 
+    let imageUrl = '';
+    if (post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0] && post._embedded['wp:featuredmedia'][0].source_url) {
+      imageUrl = post._embedded['wp:featuredmedia'][0].source_url;
+    } else if (post.yoast_head_json && post.yoast_head_json.og_image && post.yoast_head_json.og_image[0] && post.yoast_head_json.og_image[0].url) {
+      imageUrl = post.yoast_head_json.og_image[0].url;
+    }
+
     return {
       title: title.trim(),
       content: content.trim(),
       url: post.link,
       source_name: source.name,
-      published_at: publishedAt
+      published_at: publishedAt,
+      image_url: imageUrl
     };
   });
 }
@@ -176,12 +184,21 @@ async function fetchRSS(source) {
     const url = String(item.link || item.guid || '');
     const publishedAt = item.isoDate || (item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString());
 
+    let imageUrl = '';
+    if (item.enclosure && item.enclosure.url && item.enclosure.type && item.enclosure.type.startsWith('image/')) {
+      imageUrl = item.enclosure.url;
+    } else {
+      const match = content.match(/<img[^>]+src="([^">]+)"/);
+      if (match) imageUrl = match[1];
+    }
+
     return {
       title: title.trim(),
       content: content.trim(),
       url: url.trim(),
       source_name: source.name,
-      published_at: publishedAt
+      published_at: publishedAt,
+      image_url: imageUrl
     };
   });
 }
@@ -254,12 +271,19 @@ async function fetchHTML(source) {
       link = `${base.protocol}//${base.host}${link.startsWith('/') ? '' : '/'}${link}`;
     }
 
+    let imageUrl = $(element).find('img').first().attr('src') || '';
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      const base = new URL(source.url);
+      imageUrl = `${base.protocol}//${base.host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+
     if (title && link) {
       articles.push({
         title: title,
         url: link,
         source_name: source.name,
-        published_at: new Date().toISOString() // Fallback to current time during list scrape
+        published_at: new Date().toISOString(), // Fallback to current time during list scrape
+        image_url: imageUrl
       });
     }
   });
@@ -299,7 +323,17 @@ async function extractFullArticleContent(url, sourceConfig) {
       }
     }
 
-    return { title, content, published_at: publishedAt };
+    let imageUrl = $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content') || '';
+    if (!imageUrl) {
+      const firstImg = $('article img').first().attr('src') || $('.content img').first().attr('src') || $('img').first().attr('src');
+      if (firstImg) imageUrl = firstImg;
+    }
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      const base = new URL(url);
+      imageUrl = `${base.protocol}//${base.host}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+
+    return { title, content, published_at: publishedAt, image_url: imageUrl };
   } catch (error) {
     console.error(`Failed to extract full content for ${url}:`, error.message);
     return null;
