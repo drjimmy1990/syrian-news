@@ -560,22 +560,42 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     ```
 - **Purpose**: Creates the post on WordPress. Uses a Code node instead of HTTP Request so that `JSON.stringify` properly escapes HTML content with quotes and special characters.
 
-### Node 14: Update Aggregator DB (HTTP Request)
+### Node 14: Update Aggregator DB (Code)
 - **Name**: `Update Aggregator DB`
-- **Type**: `HTTP Request`
+- **Type**: `Code`
 - **Parameters**:
-  - **Method**: `PUT`
-  - **URL**: `={{ $('⚙️ Configuration').first().json.aggregatorUrl }}/api/articles/{{ $json.articleId }}`
-  - **Body**: `JSON`
-  - **JSON Body**:
-    ```json
-    {
-      "status": "published",
-      "wordpress_post_id": "={{ $json.id }}",
-      "content": "={{ $json.postPayload.content }}"
-    }
+  - **Language**: `JavaScript`
+  - **JS Code**:
+    ```javascript
+    const article = $input.first().json;
+    const config = $('⚙️ Configuration').first().json;
+
+    const updateUrl = `${config.aggregatorUrl}/api/articles/${article.articleId}`;
+    const updateBody = {
+      status: 'published',
+      wordpress_post_id: article.wpPostId
+    };
+
+    const response = await this.helpers.httpRequest({
+      method: 'PUT',
+      url: updateUrl,
+      headers: { 'Content-Type': 'application/json' },
+      body: updateBody,
+    });
+
+    return [{
+      json: {
+        sentTo: updateUrl,
+        sentBody: updateBody,
+        apiResponse: response,
+        articleId: article.articleId,
+        wpPostId: article.wpPostId,
+        wpPostUrl: article.wpPostUrl,
+        dbUpdated: true
+      }
+    }];
     ```
-- **Purpose**: Tells the aggregator database that this article has been successfully published, logging the WordPress Post ID and marking it as `'published'` so it won't be processed again.
+- **Purpose**: Tells the aggregator database that this article has been successfully published, logging the WordPress Post ID and marking it as `'published'` so it won't be processed again. Uses a Code node for robust data handling and debugging tracking.
 
 ---
 
