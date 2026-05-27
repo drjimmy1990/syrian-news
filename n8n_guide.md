@@ -287,17 +287,55 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     7. استخدم عناوين فرعية <h3> لتقسيم المحتوى إذا كان طويلاً
 
     ═══════════════════════════
-    📂 التصنيف — اختر تصنيفاً واحداً فقط:
+    📂 التصنيف — اختر رقم تصنيف واحد فقط:
     ═══════════════════════════
-    - سياسة (أخبار سياسية، قرارات حكومية، علاقات دولية، دبلوماسية)
-    - عسكري وأمني (عمليات عسكرية، أمن، اشتباكات، إرهاب)
-    - اقتصاد (أسعار، تجارة، مشاريع اقتصادية، بنوك، عملات)
-    - مجتمع (شؤون اجتماعية، تعليم، صحة، بيئة، حوادث)
-    - رياضة (كرة قدم، رياضات متنوعة، بطولات)
-    - ثقافة وفن (فن، أدب، سينما، مسرح، موسيقى)
-    - تكنولوجيا (تقنية، إنترنت، ذكاء اصطناعي، اتصالات)
-    - دولي (أخبار العالم غير المتعلقة مباشرة بسوريا)
-    - محلي (أخبار المحافظات والمدن السورية، بلديات، خدمات)
+    أخبار عامة:
+    - 21 = سياسة (أخبار سياسية، قرارات حكومية، علاقات دولية، دبلوماسية)
+    - 102 = عسكري وأمني (عمليات عسكرية، أمن، اشتباكات، إرهاب)
+    - 24 = اقتصاد (أسعار، تجارة، مشاريع اقتصادية، بنوك، عملات)
+    - 26 = مجتمع (شؤون اجتماعية، تعليم، صحة، بيئة، حوادث)
+    - 32 = رياضة (كرة قدم، رياضات متنوعة، بطولات)
+    - 28 = ثقافة (فن، أدب، سينما، مسرح، موسيقى)
+    - 35 = تكنولوجيا (تقنية، إنترنت، ذكاء اصطناعي، اتصالات)
+    - 22 = تقارير (تقارير مطولة وتحقيقات)
+    - 25 = أخبار رسمية (بيانات رسمية حكومية)
+    - 33 = منوعات (أخبار متفرقة لا تنتمي لأي تصنيف آخر)
+    
+    جغرافي — سوريا:
+    - 20 = الأخبار (أخبار سورية عامة، محلي)
+    - 41 = دمشق
+    - 42 = حلب
+    - 43 = حمص
+    - 44 = حماة
+    - 45 = إدلب
+    - 46 = درعا
+    - 47 = ريف حلب
+    - 48 = ريف دمشق
+    - 49 = اللاذقية
+    - 50 = دير الزور
+    - 51 = الرقة
+    - 52 = الحسكة
+    - 53 = السويداء
+    - 54 = طرطوس
+    - 55 = القنيطرة
+    - 56 = الجولان المحتل
+
+    جغرافي — دولي:
+    - 71 = العالم (أخبار دولية عامة)
+    - 40 = المنطقة (الشرق الأوسط عموماً)
+    - 57 = لبنان
+    - 58 = الأردن
+    - 59 = تركيا
+    - 60 = مصر
+    - 61 = العراق
+    - 67 = الولايات المتحدة
+    - 69 = الخليج العربي
+    - 70 = إفريقيا
+
+    ⚠️ ملاحظات مهمة للتصنيف:
+    - إذا ذُكرت مدينة سورية في الخبر، استخدم تصنيف تلك المدينة
+    - إذا كان الخبر يخص دولة محددة، استخدم تصنيف تلك الدولة
+    - إذا لم تجد تصنيفاً مناسباً، استخدم 20 (الأخبار)
 
     ═══════════════════════════
     📤 شكل الإخراج — JSON فقط:
@@ -305,10 +343,11 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     {
       "title": "العنوان المُعاد صياغته",
       "content": "المحتوى بصيغة HTML نظيفة",
-      "category": "اسم التصنيف"
+      "categoryId": 20
     }
 
     ⚠️ أرجع JSON فقط بدون أي نص إضافي أو شرح أو markdown.
+    ⚠️ categoryId يجب أن يكون رقماً من القائمة أعلاه فقط.
     ```
   - **User Prompt**:
     ```text
@@ -344,7 +383,7 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
       rewritten = {
         title: originalArticle.title,
         content: raw,
-        category: 'محلي'
+        categoryId: 20
       };
     }
 
@@ -355,13 +394,16 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
       .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
 
+    // Ensure categoryId is a valid number
+    const categoryId = parseInt(rewritten.categoryId) || 20;
+
     return [{
       json: {
         articleId: originalArticle.articleId,
         originalTitle: originalArticle.title,
         rewrittenTitle: rewritten.title || originalArticle.title,
         rewrittenContent: cleanContent,
-        category: rewritten.category || 'محلي',
+        categoryId: categoryId,
         url: originalArticle.url,
         source_name: originalArticle.source_name,
         image_url: originalArticle.image_url,
@@ -381,21 +423,8 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
     const article = $input.first().json;
     const config = $('⚙️ Configuration').first().json;
 
-    // Category ID mapping (Arabic name → WordPress category ID)
-    // These are the actual IDs from souree.net
-    const categoryMap = {
-      'سياسة': 21,
-      'عسكري وأمني': 102,
-      'اقتصاد': 24,
-      'مجتمع': 26,
-      'رياضة': 32,
-      'ثقافة وفن': 28,
-      'تكنولوجيا': 35,
-      'دولي': 71,
-      'محلي': 20
-    };
-
-    const categoryId = categoryMap[article.category] || 20;
+    // categoryId comes directly from the AI (already a number)
+    const categoryId = article.categoryId || 20;
 
     // Source attribution (no link, just the name)
     const attribution = `
@@ -420,7 +449,6 @@ This is the main automation workflow. It manages AI deduplication, Arabic rewrit
         wpUrl: config.wpUrl,
         wpPostStatus: config.wpPostStatus,
         categoryId: categoryId,
-        categoryArabic: article.category,
         image_url: article.image_url,
         aggregatorUrl: article.aggregatorUrl,
         postTitle: article.rewrittenTitle,
