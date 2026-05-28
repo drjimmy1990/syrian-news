@@ -31,6 +31,13 @@ class Datastore {
       CREATE INDEX IF NOT EXISTS idx_articles_url_hash ON processed_articles(url_hash);
       CREATE INDEX IF NOT EXISTS idx_articles_title_hash ON processed_articles(title_hash);
       CREATE INDEX IF NOT EXISTS idx_articles_processed_at ON processed_articles(processed_at);
+
+      CREATE TABLE IF NOT EXISTS telegram_channels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        link TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
     `);
 
     // Migration: add 'content' column to existing databases that don't have it
@@ -46,9 +53,35 @@ class Datastore {
         this.db.exec('ALTER TABLE processed_articles ADD COLUMN image_url TEXT DEFAULT NULL');
         console.log('[DB] Migrated: added image_url column to processed_articles');
       }
-    } catch (e) {
       // Ignore if table doesn't exist yet (first-run case)
     }
+  }
+
+  // =========================================================================
+  // TELEGRAM CHANNELS
+  // =========================================================================
+
+  getTelegramChannels() {
+    return this.db.prepare('SELECT * FROM telegram_channels ORDER BY created_at DESC').all();
+  }
+
+  addTelegramChannel(name, link) {
+    try {
+      const stmt = this.db.prepare('INSERT INTO telegram_channels (name, link) VALUES (?, ?)');
+      const result = stmt.run(name, link);
+      return { success: true, id: result.lastInsertRowid };
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        return { success: false, error: 'هذه القناة مضافة مسبقاً.' };
+      }
+      return { success: false, error: error.message };
+    }
+  }
+
+  deleteTelegramChannel(id) {
+    const stmt = this.db.prepare('DELETE FROM telegram_channels WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
   }
 
   /**

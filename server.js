@@ -278,6 +278,74 @@ app.get('/api/articles/stats', (req, res) => {
   }
 });
 
+// =========================================================================
+// TELEGRAM CHANNELS ENDPOINTS
+// =========================================================================
+
+/**
+ * GET /api/telegram-channels - Fetch all telegram channels
+ */
+app.get('/api/telegram-channels', (req, res) => {
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const channels = ds.getTelegramChannels();
+    ds.close();
+    res.json({ success: true, data: channels });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/telegram-channels - Add a telegram channel
+ */
+app.post('/api/telegram-channels', (req, res) => {
+  const { name, link } = req.body;
+  if (!name || !link) {
+    return res.status(400).json({ success: false, error: 'يرجى إدخال اسم القناة والرابط.' });
+  }
+  
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const result = ds.addTelegramChannel(name, link);
+    ds.close();
+    
+    if (result.success) {
+      res.json({ success: true, message: 'تم إضافة القناة بنجاح.', id: result.id });
+    } else {
+      res.status(400).json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/telegram-channels/:id - Delete a telegram channel
+ */
+app.delete('/api/telegram-channels/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const deleted = ds.deleteTelegramChannel(id);
+    ds.close();
+    
+    if (deleted) {
+      res.json({ success: true, message: 'تم حذف القناة بنجاح.' });
+    } else {
+      res.status(404).json({ success: false, error: 'لم يتم العثور على القناة.' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /**
  * GET /api/articles/recent-titles - Retrieve recent article titles for AI deduplication.
  * Used by the n8n AI dedup workflow to compare incoming articles against already-processed ones.

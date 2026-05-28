@@ -53,6 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
     tblSourcesBody: document.getElementById('tbl-sources-body'),
     btnAddSourceModal: document.getElementById('btn-add-source-modal'),
 
+    // Telegram Channels Tab
+    formAddTelegram: document.getElementById('form-add-telegram'),
+    inpTgName: document.getElementById('inp-tg-name'),
+    inpTgLink: document.getElementById('inp-tg-link'),
+    tblTelegramBody: document.getElementById('tbl-telegram-body'),
+
     // Articles Tab
     filterArticleSearch: document.getElementById('filter-article-search'),
     filterArticleSource: document.getElementById('filter-article-source'),
@@ -1446,6 +1452,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // =========================================================================
+  // 3.5. TELEGRAM CHANNELS MANAGEMENT
+  // =========================================================================
+
+  const loadTelegramChannels = async () => {
+    if (!DOM.tblTelegramBody) return;
+    
+    try {
+      DOM.tblTelegramBody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل القنوات...</td></tr>';
+      
+      const res = await fetch('/api/telegram-channels');
+      const result = await res.json();
+      
+      DOM.tblTelegramBody.innerHTML = '';
+      
+      if (!result.success || !result.data || result.data.length === 0) {
+        DOM.tblTelegramBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">لا يوجد أي قنوات تليجرام مضافة حالياً.</td>
+          </tr>
+        `;
+        return;
+      }
+      
+      result.data.forEach(channel => {
+        const tr = document.createElement('tr');
+        
+        let formattedDate = '-';
+        if (channel.created_at) {
+          try {
+            formattedDate = new Date(channel.created_at).toLocaleString('ar-EG', {
+              year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit'
+            });
+          } catch(e) {}
+        }
+        
+        tr.innerHTML = `
+          <td><strong>${channel.id}</strong></td>
+          <td>${escapeHtml(channel.name)}</td>
+          <td dir="ltr" class="text-start"><a href="${escapeHtml(channel.link)}" target="_blank"><i class="fa-brands fa-telegram"></i> ${escapeHtml(channel.link)}</a></td>
+          <td class="font-tajawal text-xs">${formattedDate}</td>
+          <td>
+            <button class="btn btn-outline-danger btn-xs btn-delete-telegram" data-id="${channel.id}">
+              <i class="fa-solid fa-trash-can"></i> حذف
+            </button>
+          </td>
+        `;
+        DOM.tblTelegramBody.appendChild(tr);
+      });
+      
+      // Bind delete handlers
+      document.querySelectorAll('.btn-delete-telegram').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = parseInt(btn.getAttribute('data-id'));
+          if (confirm('هل أنت متأكد من حذف هذه القناة؟')) {
+            try {
+              const delRes = await fetch(`/api/telegram-channels/${id}`, { method: 'DELETE' });
+              const delResult = await delRes.json();
+              if (delResult.success) {
+                showToast(delResult.message, 'success');
+                loadTelegramChannels();
+              } else {
+                showToast(delResult.error || 'فشل حذف القناة.', 'error');
+              }
+            } catch (err) {
+              showToast('خطأ في الاتصال بالخادم.', 'error');
+            }
+          }
+        });
+      });
+      
+    } catch (error) {
+      DOM.tblTelegramBody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-4 text-danger">فشل الاستعلام من قاعدة البيانات: ${error.message}</td>
+        </tr>
+      `;
+    }
+  };
+
+  // Add telegram form submission
+  if (DOM.formAddTelegram) {
+    DOM.formAddTelegram.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = DOM.inpTgName.value.trim();
+      const link = DOM.inpTgLink.value.trim();
+      
+      if (!name || !link) return;
+      
+      const submitBtn = DOM.formAddTelegram.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإضافة...';
+      submitBtn.disabled = true;
+      
+      try {
+        const res = await fetch('/api/telegram-channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, link })
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+          showToast(result.message, 'success');
+          DOM.formAddTelegram.reset();
+          loadTelegramChannels();
+        } else {
+          showToast(result.error || 'فشل إضافة القناة.', 'error');
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم.', 'error');
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
   // Bind article interactive filters
   DOM.filterArticleSearch.addEventListener('keyup', debounce(() => {
     state.pagination.page = 1;
@@ -2323,4 +2449,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   loadGlobalConfig();
   loadStats();
+  loadTelegramChannels();
 });

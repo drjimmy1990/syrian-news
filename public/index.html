@@ -38,6 +38,10 @@
           <i class="fa-solid fa-list-check"></i>
           <span>مصادر الأخبار</span>
         </a>
+        <a href="#telegram" class="menu-item" data-tab="telegram">
+          <i class="fa-brands fa-telegram"></i>
+          <span>قنوات التليجرام</span>
+        </a>
         <a href="#articles" class="menu-item" data-tab="articles">
           <i class="fa-solid fa-database"></i>
           <span>سجل المقالات</span>
@@ -312,8 +316,68 @@
           </div>
         </section>
 
-        <!-- TAB 3: ARTICLES SQLITE LOGS -->
-        <section id="tab-articles" class="tab-panel">
+        <!-- ========================================== -->
+      <!-- TAB 3: TELEGRAM CHANNELS -->
+      <!-- ========================================== -->
+      <section id="tab-telegram" class="tab-panel">
+        <div class="panel glass-card font-tajawal">
+          <div class="panel-header">
+            <h2>قنوات التليجرام (Telegram Channels)</h2>
+            <span class="badge badge-primary">إضافة قنوات للسحب</span>
+          </div>
+          <div class="panel-body">
+            <!-- Add New Channel Form -->
+            <div class="settings-card mb-4">
+              <div class="card-header">
+                <h3>إضافة قناة تليجرام جديدة</h3>
+                <p>أدخل اسم القناة ورابطها (مثال: https://t.me/syriannews)</p>
+              </div>
+              <form id="form-add-telegram" class="settings-form">
+                <div class="form-grid dual-col">
+                  <div class="form-group">
+                    <label for="inp-tg-name">اسم القناة</label>
+                    <input type="text" id="inp-tg-name" placeholder="مثال: الإخبارية السورية" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="inp-tg-link">رابط القناة</label>
+                    <input type="url" id="inp-tg-link" placeholder="https://t.me/..." required dir="ltr">
+                  </div>
+                </div>
+                <div class="form-actions mt-3">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i> إضافة القناة
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Channels Table -->
+            <div class="table-container custom-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th width="50">ID</th>
+                    <th>اسم القناة</th>
+                    <th>رابط القناة</th>
+                    <th width="150">تاريخ الإضافة</th>
+                    <th width="100">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="tbl-telegram-body">
+                  <tr>
+                    <td colspan="5" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل القنوات...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 4: ARTICLES DATABASE -->
+      <!-- ========================================== -->
+      <section id="tab-articles" class="tab-panel">
           <div class="panel glass-card">
             <div class="panel-header">
               <h2>سجل المقالات والبيانات المؤرشفة</h2>
