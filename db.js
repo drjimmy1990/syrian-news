@@ -38,6 +38,15 @@ class Datastore {
         link TEXT NOT NULL UNIQUE,
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
       );
+
+      CREATE TABLE IF NOT EXISTS telegram_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        channel_id INTEGER NOT NULL,
+        post_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        UNIQUE(channel_id, post_id)
+      );
     `);
 
     // Migration: add 'content' column to existing databases that don't have it
@@ -83,6 +92,34 @@ class Datastore {
     const stmt = this.db.prepare('DELETE FROM telegram_channels WHERE id = ?');
     const result = stmt.run(id);
     return result.changes > 0;
+  }
+
+  // =========================================================================
+  // TELEGRAM POSTS
+  // =========================================================================
+
+  upsertTelegramPostStatus(channel_id, post_id, status) {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO telegram_posts (channel_id, post_id, status, updated_at)
+        VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+        ON CONFLICT(channel_id, post_id) DO UPDATE SET
+          status = excluded.status,
+          updated_at = excluded.updated_at
+      `);
+      stmt.run(channel_id, post_id, status);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  getTelegramPostsStatus(channel_id) {
+    try {
+      return this.db.prepare('SELECT post_id, status, updated_at FROM telegram_posts WHERE channel_id = ? ORDER BY updated_at DESC').all(channel_id);
+    } catch (error) {
+      return [];
+    }
   }
 
   /**

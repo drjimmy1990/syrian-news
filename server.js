@@ -346,6 +346,53 @@ app.delete('/api/telegram-channels/:id', (req, res) => {
   }
 });
 
+// =========================================================================
+// TELEGRAM POSTS ENDPOINTS
+// =========================================================================
+
+/**
+ * GET /api/telegram-posts/:channel_id - Fetch post statuses for a specific channel
+ */
+app.get('/api/telegram-posts/:channel_id', (req, res) => {
+  const channel_id = parseInt(req.params.channel_id);
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const posts = ds.getTelegramPostsStatus(channel_id);
+    ds.close();
+    res.json({ success: true, data: posts });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/telegram-posts - Insert or update the status of a telegram post
+ */
+app.post('/api/telegram-posts', (req, res) => {
+  const { channel_id, post_id, status } = req.body;
+  if (!channel_id || !post_id || !status) {
+    return res.status(400).json({ success: false, error: 'يرجى إدخال معرف القناة، ومعرف المنشور، والحالة.' });
+  }
+  
+  const config = readConfig();
+  const dbPath = config.general.dbPath || 'news_aggregator.db';
+  try {
+    const ds = new Datastore(dbPath);
+    const result = ds.upsertTelegramPostStatus(parseInt(channel_id), String(post_id), status);
+    ds.close();
+    
+    if (result.success) {
+      res.json({ success: true, message: 'تم تحديث حالة المنشور بنجاح.' });
+    } else {
+      res.status(400).json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /**
  * GET /api/articles/recent-titles - Retrieve recent article titles for AI deduplication.
  * Used by the n8n AI dedup workflow to compare incoming articles against already-processed ones.
