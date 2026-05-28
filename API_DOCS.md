@@ -614,6 +614,56 @@ Body: {"enabled": true}   // or false
 
 ---
 
+## 📱 Telegram Endpoints
+
+#### `GET /api/telegram-channels`
+Fetch a list of all saved Telegram channels.
+
+```bash
+curl http://localhost:3000/api/telegram-channels
+```
+
+#### `POST /api/telegram-channels`
+Add a new Telegram channel.
+
+```bash
+curl -X POST http://localhost:3000/api/telegram-channels \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "الإخبارية السورية",
+    "link": "https://t.me/syriannews"
+  }'
+```
+
+#### `DELETE /api/telegram-channels/:id`
+Delete a Telegram channel by ID.
+
+```bash
+curl -X DELETE http://localhost:3000/api/telegram-channels/1
+```
+
+#### `POST /api/telegram-posts`
+Insert or update the status of a Telegram post.
+
+```bash
+curl -X POST http://localhost:3000/api/telegram-posts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel_id": 1,
+    "post_id": 1450,
+    "status": "published"
+  }'
+```
+
+#### `GET /api/telegram-posts/:channel_id`
+Fetch post statuses for a specific channel ID.
+
+```bash
+curl http://localhost:3000/api/telegram-posts/1
+```
+
+---
+
 ## 🎛️ Per-Source Controls Reference
 
 | Field | Type | Default | Description |
