@@ -53,6 +53,7 @@ class Datastore {
         this.db.exec('ALTER TABLE processed_articles ADD COLUMN image_url TEXT DEFAULT NULL');
         console.log('[DB] Migrated: added image_url column to processed_articles');
       }
+    } catch (e) {
       // Ignore if table doesn't exist yet (first-run case)
     }
   }
