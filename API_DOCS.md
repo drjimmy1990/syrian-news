@@ -617,7 +617,8 @@ Body: {"enabled": true}   // or false
 ## 📱 Telegram Endpoints
 
 #### `GET /api/telegram-channels`
-Fetch a list of all saved Telegram channels.
+Fetch a list of all saved Telegram channels. 
+*Channels are sorted so that the one that has not been scraped for the longest time appears first.*
 
 ```bash
 curl http://localhost:3000/api/telegram-channels
@@ -643,7 +644,7 @@ curl -X DELETE http://localhost:3000/api/telegram-channels/1
 ```
 
 #### `POST /api/telegram-posts`
-Insert or update the status of a Telegram post.
+Insert or update the status of a Telegram post. Automatically updates the `last_scraped_at` timestamp of the channel.
 
 ```bash
 curl -X POST http://localhost:3000/api/telegram-posts \
@@ -651,10 +652,11 @@ curl -X POST http://localhost:3000/api/telegram-posts \
   -d '{
     "channel_id": 1,
     "post_id": 1450,
-    "status": "scraped"
+    "status": "scraped",
+    "title": "Optional Post Title"
   }'
 ```
-> **Note:** If `"status"` is omitted, it defaults to `"scraped"`.
+> **Note:** If `"status"` is omitted, it defaults to `"scraped"`. The `"title"` is optional.
 
 #### `GET /api/telegram-posts/:channel_id`
 Fetch post statuses for a specific channel ID.

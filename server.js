@@ -371,7 +371,7 @@ app.get('/api/telegram-posts/:channel_id', (req, res) => {
  * POST /api/telegram-posts - Insert or update the status of a telegram post
  */
 app.post('/api/telegram-posts', (req, res) => {
-  const { channel_id, post_id } = req.body;
+  const { channel_id, post_id, title } = req.body;
   const status = req.body.status || 'scraped';
   if (!channel_id || !post_id) {
     return res.status(400).json({ success: false, error: 'يرجى إدخال معرف القناة ومعرف المنشور.' });
@@ -381,7 +381,7 @@ app.post('/api/telegram-posts', (req, res) => {
   const dbPath = config.general.dbPath || 'news_aggregator.db';
   try {
     const ds = new Datastore(dbPath);
-    const result = ds.upsertTelegramPostStatus(parseInt(channel_id), String(post_id), status);
+    const result = ds.upsertTelegramPostStatus(parseInt(channel_id), String(post_id), status, title);
     ds.close();
     
     if (result.success) {

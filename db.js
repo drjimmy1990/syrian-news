@@ -62,6 +62,18 @@ class Datastore {
         this.db.exec('ALTER TABLE processed_articles ADD COLUMN image_url TEXT DEFAULT NULL');
         console.log('[DB] Migrated: added image_url column to processed_articles');
       }
+      
+      const tcCols = this.db.pragma('table_info(telegram_channels)');
+      if (tcCols.length > 0 && !tcCols.some(c => c.name === 'last_scraped_at')) {
+        this.db.exec('ALTER TABLE telegram_channels ADD COLUMN last_scraped_at TEXT DEFAULT NULL');
+        console.log('[DB] Migrated: added last_scraped_at column to telegram_channels');
+      }
+
+      const tpCols = this.db.pragma('table_info(telegram_posts)');
+      if (tpCols.length > 0 && !tpCols.some(c => c.name === 'title')) {
+        this.db.exec('ALTER TABLE telegram_posts ADD COLUMN title TEXT DEFAULT NULL');
+        console.log('[DB] Migrated: added title column to telegram_posts');
+      }
     } catch (e) {
       // Ignore if table doesn't exist yet (first-run case)
     }
@@ -72,7 +84,7 @@ class Datastore {
   // =========================================================================
 
   getTelegramChannels() {
-    return this.db.prepare('SELECT * FROM telegram_channels ORDER BY created_at DESC').all();
+    return this.db.prepare('SELECT * FROM telegram_channels ORDER BY last_scraped_at ASC NULLS FIRST, created_at DESC').all();
   }
 
   addTelegramChannel(name, link) {
@@ -98,16 +110,26 @@ class Datastore {
   // TELEGRAM POSTS
   // =========================================================================
 
-  upsertTelegramPostStatus(channel_id, post_id, status) {
+  upsertTelegramPostStatus(channel_id, post_id, status, title = null) {
     try {
       const stmt = this.db.prepare(`
-        INSERT INTO telegram_posts (channel_id, post_id, status, updated_at)
-        VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+        INSERT INTO telegram_posts (channel_id, post_id, status, title, updated_at)
+        VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
         ON CONFLICT(channel_id, post_id) DO UPDATE SET
           status = excluded.status,
+          title = COALESCE(excluded.title, telegram_posts.title),
           updated_at = excluded.updated_at
       `);
-      stmt.run(channel_id, post_id, status);
+      stmt.run(channel_id, post_id, status, title);
+      
+      // Update the channel's last_scraped_at so it goes to the bottom of the queue
+      const updateChannelStmt = this.db.prepare(`
+        UPDATE telegram_channels 
+        SET last_scraped_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 
+        WHERE id = ?
+      `);
+      updateChannelStmt.run(channel_id);
+      
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
