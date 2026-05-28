@@ -371,9 +371,10 @@ app.get('/api/telegram-posts/:channel_id', (req, res) => {
  * POST /api/telegram-posts - Insert or update the status of a telegram post
  */
 app.post('/api/telegram-posts', (req, res) => {
-  const { channel_id, post_id, status } = req.body;
-  if (!channel_id || !post_id || !status) {
-    return res.status(400).json({ success: false, error: 'يرجى إدخال معرف القناة، ومعرف المنشور، والحالة.' });
+  const { channel_id, post_id } = req.body;
+  const status = req.body.status || 'scraped';
+  if (!channel_id || !post_id) {
+    return res.status(400).json({ success: false, error: 'يرجى إدخال معرف القناة ومعرف المنشور.' });
   }
   
   const config = readConfig();

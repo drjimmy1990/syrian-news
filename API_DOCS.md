@@ -651,9 +651,10 @@ curl -X POST http://localhost:3000/api/telegram-posts \
   -d '{
     "channel_id": 1,
     "post_id": 1450,
-    "status": "published"
+    "status": "scraped"
   }'
 ```
+> **Note:** If `"status"` is omitted, it defaults to `"scraped"`.
 
 #### `GET /api/telegram-posts/:channel_id`
 Fetch post statuses for a specific channel ID.
