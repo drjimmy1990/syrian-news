@@ -303,6 +303,7 @@ app.get('/api/telegram-channels', (req, res) => {
  */
 app.post('/api/telegram-channels', (req, res) => {
   const { name, link } = req.body;
+  const sort_order = parseInt(req.body.sort_order) || 0;
   if (!name || !link) {
     return res.status(400).json({ success: false, error: 'يرجى إدخال اسم القناة والرابط.' });
   }
@@ -311,7 +312,7 @@ app.post('/api/telegram-channels', (req, res) => {
   const dbPath = config.general.dbPath || 'news_aggregator.db';
   try {
     const ds = new Datastore(dbPath);
-    const result = ds.addTelegramChannel(name, link);
+    const result = ds.addTelegramChannel(name, link, sort_order);
     ds.close();
     
     if (result.success) {

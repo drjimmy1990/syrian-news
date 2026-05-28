@@ -64,9 +64,9 @@ class Datastore {
       }
       
       const tcCols = this.db.pragma('table_info(telegram_channels)');
-      if (tcCols.length > 0 && !tcCols.some(c => c.name === 'last_scraped_at')) {
-        this.db.exec('ALTER TABLE telegram_channels ADD COLUMN last_scraped_at TEXT DEFAULT NULL');
-        console.log('[DB] Migrated: added last_scraped_at column to telegram_channels');
+      if (tcCols.length > 0 && !tcCols.some(c => c.name === 'sort_order')) {
+        this.db.exec('ALTER TABLE telegram_channels ADD COLUMN sort_order INTEGER DEFAULT 0');
+        console.log('[DB] Migrated: added sort_order column to telegram_channels');
       }
 
       const tpCols = this.db.pragma('table_info(telegram_posts)');
@@ -84,13 +84,13 @@ class Datastore {
   // =========================================================================
 
   getTelegramChannels() {
-    return this.db.prepare('SELECT * FROM telegram_channels ORDER BY last_scraped_at ASC NULLS FIRST, created_at DESC').all();
+    return this.db.prepare('SELECT * FROM telegram_channels ORDER BY sort_order ASC, id ASC').all();
   }
 
-  addTelegramChannel(name, link) {
+  addTelegramChannel(name, link, sort_order = 0) {
     try {
-      const stmt = this.db.prepare('INSERT INTO telegram_channels (name, link) VALUES (?, ?)');
-      const result = stmt.run(name, link);
+      const stmt = this.db.prepare('INSERT INTO telegram_channels (name, link, sort_order) VALUES (?, ?, ?)');
+      const result = stmt.run(name, link, sort_order);
       return { success: true, id: result.lastInsertRowid };
     } catch (error) {
       if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -121,14 +121,6 @@ class Datastore {
           updated_at = excluded.updated_at
       `);
       stmt.run(channel_id, post_id, status, title);
-      
-      // Update the channel's last_scraped_at so it goes to the bottom of the queue
-      const updateChannelStmt = this.db.prepare(`
-        UPDATE telegram_channels 
-        SET last_scraped_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 
-        WHERE id = ?
-      `);
-      updateChannelStmt.run(channel_id);
       
       return { success: true };
     } catch (error) {

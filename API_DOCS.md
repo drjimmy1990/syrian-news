@@ -618,21 +618,22 @@ Body: {"enabled": true}   // or false
 
 #### `GET /api/telegram-channels`
 Fetch a list of all saved Telegram channels. 
-*Channels are sorted so that the one that has not been scraped for the longest time appears first.*
+*Channels are sorted manually by their `sort_order` in ascending order, then by their `id`.*
 
 ```bash
 curl http://localhost:3000/api/telegram-channels
 ```
 
 #### `POST /api/telegram-channels`
-Add a new Telegram channel.
+Add a new Telegram channel. You can optionally provide a `sort_order` (defaults to 0). Lower numbers appear first.
 
 ```bash
 curl -X POST http://localhost:3000/api/telegram-channels \
   -H "Content-Type: application/json" \
   -d '{
     "name": "الإخبارية السورية",
-    "link": "https://t.me/syriannews"
+    "link": "https://t.me/syriannews",
+    "sort_order": 1
   }'
 ```
 

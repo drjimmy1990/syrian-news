@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     formAddTelegram: document.getElementById('form-add-telegram'),
     inpTgName: document.getElementById('inp-tg-name'),
     inpTgLink: document.getElementById('inp-tg-link'),
+    inpTgSort: document.getElementById('inp-tg-sort'),
     tblTelegramBody: document.getElementById('tbl-telegram-body'),
 
     // Articles Tab
@@ -1491,6 +1492,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         tr.innerHTML = `
           <td><strong>${channel.id}</strong></td>
+          <td><span class="badge badge-purple">${channel.sort_order || 0}</span></td>
           <td>${escapeHtml(channel.name)}</td>
           <td dir="ltr" class="text-start"><a href="${escapeHtml(channel.link)}" target="_blank"><i class="fa-brands fa-telegram"></i> ${escapeHtml(channel.link)}</a></td>
           <td class="font-tajawal text-xs">${formattedDate}</td>
@@ -1540,6 +1542,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const name = DOM.inpTgName.value.trim();
       const link = DOM.inpTgLink.value.trim();
+      const sort_order = parseInt(DOM.inpTgSort.value) || 0;
       
       if (!name || !link) return;
       
@@ -1552,7 +1555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch('/api/telegram-channels', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, link })
+          body: JSON.stringify({ name, link, sort_order })
         });
         const result = await res.json();
         
